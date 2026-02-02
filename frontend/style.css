@@ -7,7 +7,7 @@
     --priority-low: #22c55e;
     --priority-medium: #eab308;
     --priority-high: #f97316;
-    --priority-critical: #ef4444;
+    --priority-urgent: #ef4444;
     --overdue-bg: #fef2f2;
     --overdue-border: #ef4444;
 }
@@ -124,8 +124,8 @@ header nav {
     border-left-color: var(--priority-high);
 }
 
-.card[data-priority="critical"] {
-    border-left-color: var(--priority-critical);
+.card[data-priority="urgent"] {
+    border-left-color: var(--priority-urgent);
     animation: pulse 2s infinite;
 }
 
@@ -177,7 +177,7 @@ header nav {
 }
 
 .card-due.overdue {
-    color: var(--priority-critical);
+    color: var(--priority-urgent);
     font-weight: 600;
 }
 
@@ -328,7 +328,7 @@ dialog article footer button {
 }
 
 .toast.error {
-    border-left: 4px solid var(--priority-critical);
+    border-left: 4px solid var(--priority-urgent);
 }
 
 .toast.info {

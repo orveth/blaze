@@ -1,16 +1,18 @@
 """FastAPI application for the Kanban board."""
 
+import logging
 import secrets
+from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from pathlib import Path
 from pydantic import BaseModel
 
 from .auth import verify_token, get_api_token
 from .models import (
-    Board,
     BoardStats,
     Card,
     CardCreate,
@@ -20,16 +22,39 @@ from .models import (
 )
 from .storage import get_storage
 
+# Logging setup
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+
+# Lifespan (replaces deprecated on_event)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan handler."""
+    token = get_api_token()
+    logger.info("=" * 50)
+    logger.info("Kanban Board API started")
+    logger.info(f"API Token: {token}")
+    logger.info("=" * 50)
+    yield
+    logger.info("Kanban Board API shutting down")
+
+
 app = FastAPI(
     title="Kanban Board API",
     description="A simple kanban board with drag-and-drop support",
-    version="0.1.0",
+    version="0.2.0",
+    lifespan=lifespan,
 )
 
-# CORS middleware for frontend
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, restrict this
+    allow_origins=["*"],  # Restrict in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -37,6 +62,7 @@ app.add_middleware(
 
 
 # --- Auth Models ---
+
 
 class LoginRequest(BaseModel):
     password: str
@@ -48,6 +74,7 @@ class LoginResponse(BaseModel):
 
 # --- Health Check ---
 
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint (no auth required)."""
@@ -56,24 +83,25 @@ async def health_check():
 
 # --- Authentication ---
 
+
 @app.post("/api/auth", response_model=LoginResponse)
 async def login(request: LoginRequest):
-    """Authenticate with password and receive API token.
-    
-    The password is the API token itself (simple auth scheme).
-    """
+    """Authenticate with password and receive API token."""
     expected_token = get_api_token()
-    
+
     if not secrets.compare_digest(request.password, expected_token):
+        logger.warning("Failed login attempt")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid password",
         )
-    
+
+    logger.info("Successful login")
     return LoginResponse(token=expected_token)
 
 
 # --- Card Endpoints ---
+
 
 @app.get("/api/cards", response_model=list[Card])
 async def list_cards(
@@ -108,7 +136,7 @@ async def create_card(
 ):
     """Create a new card."""
     storage = get_storage()
-    return storage.create_card(
+    card = storage.create_card(
         title=card_data.title,
         description=card_data.description,
         priority=card_data.priority,
@@ -116,6 +144,8 @@ async def create_card(
         due_date=card_data.due_date,
         tags=card_data.tags,
     )
+    logger.info(f"Created card: {card.id} - {card.title}")
+    return card
 
 
 @app.put("/api/cards/{card_id}", response_model=Card)
@@ -126,7 +156,7 @@ async def update_card(
 ):
     """Update a card's fields."""
     storage = get_storage()
-    
+
     # Build updates dict from non-None fields
     updates = {}
     if card_data.title is not None:
@@ -141,13 +171,14 @@ async def update_card(
         updates["tags"] = card_data.tags
     if card_data.column is not None:
         updates["column"] = card_data.column
-    
+
     card = storage.update_card(card_id, **updates)
     if not card:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Card {card_id} not found",
         )
+    logger.info(f"Updated card: {card_id}")
     return card
 
 
@@ -165,6 +196,7 @@ async def move_card(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Card {card_id} not found",
         )
+    logger.info(f"Moved card {card_id} to {move_data.column.value}")
     return card
 
 
@@ -180,10 +212,12 @@ async def delete_card(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Card {card_id} not found",
         )
+    logger.info(f"Deleted card: {card_id}")
     return None
 
 
 # --- Board Endpoints ---
+
 
 @app.get("/api/board")
 async def get_board(
@@ -193,9 +227,11 @@ async def get_board(
     storage = get_storage()
     columns = storage.get_board()
     stats = storage.get_stats()
-    
+
     return {
-        "columns": {col: [card.model_dump() for card in cards] for col, cards in columns.items()},
+        "columns": {
+            col: [card.model_dump() for card in cards] for col, cards in columns.items()
+        },
         "stats": stats,
     }
 
@@ -209,13 +245,13 @@ async def get_board_stats(
     return storage.get_stats()
 
 
-# --- Static Files (Frontend) ---
+# --- Static Files ---
 
 frontend_path = Path(__file__).parent.parent / "frontend"
 
 
 @app.get("/")
-async def serve_frontend():
+async def serve_index():
     """Serve the frontend index.html."""
     index_path = frontend_path / "index.html"
     if index_path.exists():
@@ -223,31 +259,6 @@ async def serve_frontend():
     return {"message": "Frontend not found. API is running at /api/"}
 
 
-@app.get("/style.css")
-async def serve_css():
-    """Serve the CSS file."""
-    css_path = frontend_path / "style.css"
-    if css_path.exists():
-        return FileResponse(css_path, media_type="text/css")
-    raise HTTPException(status_code=404, detail="CSS not found")
-
-
-@app.get("/app.js")
-async def serve_js():
-    """Serve the JavaScript file."""
-    js_path = frontend_path / "app.js"
-    if js_path.exists():
-        return FileResponse(js_path, media_type="application/javascript")
-    raise HTTPException(status_code=404, detail="JS not found")
-
-
-# --- Startup ---
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize storage and display token on startup."""
-    token = get_api_token()
-    print(f"\n{'='*50}")
-    print("Kanban Board API started!")
-    print(f"API Token: {token}")
-    print(f"{'='*50}\n")
+# Mount static files for CSS/JS
+if frontend_path.exists():
+    app.mount("/static", StaticFiles(directory=frontend_path), name="static")
