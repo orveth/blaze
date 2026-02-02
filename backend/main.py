@@ -1,10 +1,12 @@
 """FastAPI application for the Kanban board."""
 
+import secrets
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
+from pydantic import BaseModel
 
 from .auth import verify_token, get_api_token
 from .models import (
@@ -34,12 +36,41 @@ app.add_middleware(
 )
 
 
+# --- Auth Models ---
+
+class LoginRequest(BaseModel):
+    password: str
+
+
+class LoginResponse(BaseModel):
+    token: str
+
+
 # --- Health Check ---
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint (no auth required)."""
     return {"status": "ok"}
+
+
+# --- Authentication ---
+
+@app.post("/api/auth", response_model=LoginResponse)
+async def login(request: LoginRequest):
+    """Authenticate with password and receive API token.
+    
+    The password is the API token itself (simple auth scheme).
+    """
+    expected_token = get_api_token()
+    
+    if not secrets.compare_digest(request.password, expected_token):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid password",
+        )
+    
+    return LoginResponse(token=expected_token)
 
 
 # --- Card Endpoints ---
@@ -182,16 +213,32 @@ async def get_board_stats(
 
 frontend_path = Path(__file__).parent.parent / "frontend"
 
-if frontend_path.exists():
-    app.mount("/static", StaticFiles(directory=frontend_path), name="static")
-    
-    @app.get("/")
-    async def serve_frontend():
-        """Serve the frontend index.html."""
-        index_path = frontend_path / "index.html"
-        if index_path.exists():
-            return FileResponse(index_path)
-        return {"message": "Frontend not found. API is running at /api/"}
+
+@app.get("/")
+async def serve_frontend():
+    """Serve the frontend index.html."""
+    index_path = frontend_path / "index.html"
+    if index_path.exists():
+        return FileResponse(index_path)
+    return {"message": "Frontend not found. API is running at /api/"}
+
+
+@app.get("/style.css")
+async def serve_css():
+    """Serve the CSS file."""
+    css_path = frontend_path / "style.css"
+    if css_path.exists():
+        return FileResponse(css_path, media_type="text/css")
+    raise HTTPException(status_code=404, detail="CSS not found")
+
+
+@app.get("/app.js")
+async def serve_js():
+    """Serve the JavaScript file."""
+    js_path = frontend_path / "app.js"
+    if js_path.exists():
+        return FileResponse(js_path, media_type="application/javascript")
+    raise HTTPException(status_code=404, detail="JS not found")
 
 
 # --- Startup ---
