@@ -3,31 +3,27 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = nixpkgs.legacyPackages.${system};
-        python = pkgs.python311;
-        pythonPkgs = python.pkgs;
-      in
-      {
-        devShells.default = pkgs.mkShell {
-          buildInputs = [
-            python
-            pythonPkgs.fastapi
-            pythonPkgs.uvicorn
-            pythonPkgs.pydantic
-            pythonPkgs.python-multipart
-          ];
+  outputs = { self, nixpkgs }:
+    let
+      system = "x86_64-linux";
+      pkgs = nixpkgs.legacyPackages.${system};
+      python = pkgs.python311;
+    in
+    {
+      devShells.${system}.default = pkgs.mkShell {
+        buildInputs = [
+          python
+          python.pkgs.fastapi
+          python.pkgs.uvicorn
+          python.pkgs.pydantic
+        ];
 
-          shellHook = ''
-            echo "🗂️  Kanban dev shell"
-            echo "Run: uvicorn backend.main:app --reload"
-          '';
-        };
-      }
-    );
+        shellHook = ''
+          echo "🗂️  Kanban dev shell"
+          echo "Run: uvicorn backend.main:app --reload"
+        '';
+      };
+    };
 }
