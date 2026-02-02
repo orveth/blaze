@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban Board</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="container">
+        <nav>
+            <ul>
+                <li><strong>🜃 Kanban</strong></li>
+            </ul>
+            <ul>
+                <li><button class="outline" id="statsBtn">📊 Stats</button></li>
+                <li><button id="addCardBtn">+ Add Card</button></li>
+                <li><button class="outline secondary" id="logoutBtn">Logout</button></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container-fluid">
+        <div id="board" class="board">
+            <div class="column" data-column="backlog">
+                <h3>📥 Backlog</h3>
+                <div class="cards" data-column="backlog"></div>
+            </div>
+            <div class="column" data-column="todo">
+                <h3>📋 To Do</h3>
+                <div class="cards" data-column="todo"></div>
+            </div>
+            <div class="column" data-column="in_progress">
+                <h3>🔨 In Progress</h3>
+                <div class="cards" data-column="in_progress"></div>
+            </div>
+            <div class="column" data-column="review">
+                <h3>👀 Review</h3>
+                <div class="cards" data-column="review"></div>
+            </div>
+            <div class="column" data-column="done">
+                <h3>✅ Done</h3>
+                <div class="cards" data-column="done"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Login Modal -->
+    <dialog id="loginModal">
+        <article>
+            <header>
+                <h3>🔐 Login</h3>
+            </header>
+            <form id="loginForm">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required autofocus>
+                <button type="submit">Login</button>
+            </form>
+        </article>
+    </dialog>
+
+    <!-- Card Modal -->
+    <dialog id="cardModal">
+        <article>
+            <header>
+                <button aria-label="Close" rel="prev" class="close-btn"></button>
+                <h3 id="cardModalTitle">New Card</h3>
+            </header>
+            <form id="cardForm">
+                <input type="hidden" id="cardId" name="cardId">
+                
+                <label for="cardTitle">Title *</label>
+                <input type="text" id="cardTitle" name="title" required maxlength="200">
+                
+                <label for="cardDescription">Description</label>
+                <textarea id="cardDescription" name="description" rows="3"></textarea>
+                
+                <div class="grid">
+                    <div>
+                        <label for="cardPriority">Priority</label>
+                        <select id="cardPriority" name="priority">
+                            <option value="low">🟢 Low</option>
+                            <option value="medium" selected>🟡 Medium</option>
+                            <option value="high">🟠 High</option>
+                            <option value="critical">🔴 Critical</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="cardColumn">Column</label>
+                        <select id="cardColumn" name="column">
+                            <option value="backlog">📥 Backlog</option>
+                            <option value="todo">📋 To Do</option>
+                            <option value="in_progress">🔨 In Progress</option>
+                            <option value="review">👀 Review</option>
+                            <option value="done">✅ Done</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <label for="cardDueDate">Due Date</label>
+                <input type="date" id="cardDueDate" name="due_date">
+                
+                <label for="cardTags">Tags (comma-separated)</label>
+                <input type="text" id="cardTags" name="tags" placeholder="e.g., bug, feature, docs">
+                
+                <footer>
+                    <button type="button" class="secondary" id="deleteCardBtn" style="display: none;">Delete</button>
+                    <button type="submit" id="saveCardBtn">Save</button>
+                </footer>
+            </form>
+        </article>
+    </dialog>
+
+    <!-- Stats Modal -->
+    <dialog id="statsModal">
+        <article>
+            <header>
+                <button aria-label="Close" rel="prev" class="close-btn"></button>
+                <h3>📊 Board Statistics</h3>
+            </header>
+            <div id="statsContent">
+                <p>Loading...</p>
+            </div>
+        </article>
+    </dialog>
+
+    <!-- Confirm Delete Modal -->
+    <dialog id="confirmModal">
+        <article>
+            <header>
+                <h3>⚠️ Confirm Delete</h3>
+            </header>
+            <p>Are you sure you want to delete this card? This action cannot be undone.</p>
+            <footer>
+                <button class="secondary" id="confirmCancel">Cancel</button>
+                <button class="contrast" id="confirmDelete">Delete</button>
+            </footer>
+        </article>
+    </dialog>
+
+    <script src="app.js"></script>
+</body>
+</html>

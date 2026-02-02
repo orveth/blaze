@@ -1,0 +1,347 @@
+/* Kanban Board Styles */
+
+:root {
+    --board-bg: #f0f2f5;
+    --column-bg: #ebecf0;
+    --card-bg: #ffffff;
+    --priority-low: #22c55e;
+    --priority-medium: #eab308;
+    --priority-high: #f97316;
+    --priority-critical: #ef4444;
+    --overdue-bg: #fef2f2;
+    --overdue-border: #ef4444;
+}
+
+[data-theme="dark"] {
+    --board-bg: #1a1a2e;
+    --column-bg: #16213e;
+    --card-bg: #1f2937;
+}
+
+body {
+    background: var(--board-bg);
+}
+
+header.container {
+    background: var(--pico-background-color);
+    margin-bottom: 1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+header nav {
+    margin: 0;
+}
+
+/* Board Layout */
+.board {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+    padding: 0 1rem;
+    min-height: calc(100vh - 120px);
+}
+
+@media (max-width: 1200px) {
+    .board {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .board {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Columns */
+.column {
+    background: var(--column-bg);
+    border-radius: 8px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 140px);
+}
+
+.column h3 {
+    font-size: 0.9rem;
+    margin: 0 0 0.75rem 0;
+    padding: 0.5rem;
+    background: rgba(0,0,0,0.05);
+    border-radius: 4px;
+    text-align: center;
+}
+
+.cards {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 100px;
+    padding: 4px;
+}
+
+/* Cards */
+.card {
+    background: var(--card-bg);
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    cursor: grab;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-left: 4px solid var(--priority-medium);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.card:active {
+    cursor: grabbing;
+}
+
+.card.dragging {
+    opacity: 0.5;
+    transform: rotate(3deg);
+}
+
+.card.drag-over {
+    border-top: 3px solid var(--pico-primary);
+}
+
+/* Priority Colors */
+.card[data-priority="low"] {
+    border-left-color: var(--priority-low);
+}
+
+.card[data-priority="medium"] {
+    border-left-color: var(--priority-medium);
+}
+
+.card[data-priority="high"] {
+    border-left-color: var(--priority-high);
+}
+
+.card[data-priority="critical"] {
+    border-left-color: var(--priority-critical);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    50% { box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3); }
+}
+
+/* Overdue Cards */
+.card.overdue {
+    background: var(--overdue-bg);
+    border-right: 3px solid var(--overdue-border);
+}
+
+[data-theme="dark"] .card.overdue {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Card Content */
+.card-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    word-wrap: break-word;
+}
+
+.card-description {
+    font-size: 0.8rem;
+    color: var(--pico-muted-color);
+    margin-bottom: 0.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--pico-muted-color);
+}
+
+.card-due {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.card-due.overdue {
+    color: var(--priority-critical);
+    font-weight: 600;
+}
+
+.card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.tag {
+    background: var(--pico-primary-background);
+    color: var(--pico-primary);
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.7rem;
+}
+
+/* Drop Zone Highlighting */
+.cards.drag-over {
+    background: rgba(var(--pico-primary-rgb), 0.1);
+    border: 2px dashed var(--pico-primary);
+    border-radius: 4px;
+}
+
+/* Modal Adjustments */
+dialog article {
+    max-width: 500px;
+}
+
+dialog article header {
+    position: relative;
+}
+
+dialog article header .close-btn {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    margin: 0;
+    width: auto;
+}
+
+dialog article footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+dialog article footer button {
+    flex: 1;
+}
+
+#deleteCardBtn {
+    flex: 0 0 auto;
+    width: auto;
+}
+
+/* Stats Modal */
+#statsContent {
+    display: grid;
+    gap: 1rem;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem;
+    background: var(--column-bg);
+    border-radius: 4px;
+}
+
+.stat-label {
+    font-weight: 500;
+}
+
+.stat-value {
+    font-weight: 700;
+    color: var(--pico-primary);
+}
+
+.stat-section {
+    margin-top: 1rem;
+}
+
+.stat-section h4 {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    color: var(--pico-muted-color);
+}
+
+/* Loading State */
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: var(--pico-muted-color);
+}
+
+.loading::after {
+    content: '';
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Empty State */
+.empty-column {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--pico-muted-color);
+    font-size: 0.85rem;
+}
+
+/* Toast Notifications */
+.toast-container {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.toast {
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    background: var(--pico-background-color);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    animation: slideIn 0.3s ease;
+    max-width: 300px;
+}
+
+.toast.success {
+    border-left: 4px solid var(--priority-low);
+}
+
+.toast.error {
+    border-left: 4px solid var(--priority-critical);
+}
+
+.toast.info {
+    border-left: 4px solid var(--pico-primary);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
