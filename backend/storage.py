@@ -14,7 +14,10 @@ from .utils import generate_id, now_utc
 class Storage:
     """Thread-safe JSON file storage with file locking."""
 
-    def __init__(self, data_path: str | Path = "data/board.json"):
+    def __init__(self, data_path: str | Path | None = None):
+        if data_path is None:
+            data_dir = os.environ.get("KANBAN_DATA_DIR", "data")
+            data_path = Path(data_dir) / "board.json"
         self.data_path = Path(data_path)
         self.data_path.parent.mkdir(parents=True, exist_ok=True)
         self._ensure_file_exists()
@@ -228,8 +231,11 @@ class Storage:
 _storage: Optional[Storage] = None
 
 
-def get_storage(data_path: str = "data/board.json") -> Storage:
-    """Get or create the storage instance."""
+def get_storage(data_path: str | Path | None = None) -> Storage:
+    """Get or create the storage instance.
+    
+    If data_path is None, uses KANBAN_DATA_DIR env var or defaults to 'data/'.
+    """
     global _storage
     if _storage is None:
         _storage = Storage(data_path)
