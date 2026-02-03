@@ -108,7 +108,6 @@ async function handleLogin(e) {
         localStorage.setItem('blaze_token', authToken);
         loginModal.close();
         loadBoard();
-        showToast('Logged in', 'success');
     } catch (error) {
         showToast(error.message, 'error');
     }
@@ -119,7 +118,6 @@ function handleLogout() {
     localStorage.removeItem('blaze_token');
     showLoginModal();
     clearBoard();
-    showToast('Logged out', 'info');
 }
 
 // API Helpers
@@ -353,8 +351,6 @@ function setupDragAndDrop() {
                     const newNum = parseInt(newCount.textContent.replace(/[()]/g, '')) || 0;
                     newCount.textContent = `(${newNum + 1})`;
                 }
-
-                showToast('Card moved', 'success');
             } catch (error) {
                 showToast(`Failed to move: ${error.message}`, 'error');
                 loadBoard();
@@ -523,7 +519,6 @@ function setupTouchDrag() {
                 }
 
                 vibrate([20, 50, 20]);
-                showToast('Card moved', 'success');
             } catch (error) {
                 showToast(`Failed to move: ${error.message}`, 'error');
                 loadBoard();
@@ -645,13 +640,11 @@ async function handleSaveCard(e) {
                 method: 'PUT',
                 body: JSON.stringify(cardData)
             });
-            showToast('Card updated', 'success');
         } else {
             await apiCall('/cards', {
                 method: 'POST',
                 body: JSON.stringify(cardData)
             });
-            showToast('Card created', 'success');
         }
 
         cardModal.close();
@@ -672,7 +665,6 @@ async function handleDeleteCard() {
         confirmModal.close();
         cardModal.close();
         loadBoard();
-        showToast('Card deleted', 'success');
     } catch (error) {
         showToast(`Failed to delete: ${error.message}`, 'error');
     }
