@@ -16,6 +16,7 @@
         ps.fastapi
         ps.uvicorn
         ps.pydantic
+        ps.websockets
       ]);
 
       # The blaze server package
@@ -89,6 +90,7 @@
           python.pkgs.fastapi
           python.pkgs.uvicorn
           python.pkgs.pydantic
+          python.pkgs.websockets
           pkgs.cargo
           pkgs.rustc
           pkgs.pkg-config
