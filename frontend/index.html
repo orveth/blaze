@@ -19,32 +19,39 @@
             </h1>
         </div>
         <nav>
-            <button class="nav-btn" id="filterBtn" title="Filter cards">Filter</button>
             <button class="nav-btn" id="statsBtn" title="Statistics">Stats</button>
             <button class="nav-btn primary" id="addCardBtn" title="Add card">+ New</button>
             <button class="nav-btn" id="logoutBtn" title="Logout">Logout</button>
         </nav>
     </header>
     
-    <!-- Filter Panel -->
-    <div id="filterPanel" class="filter-panel" style="display: none;">
-        <div class="filter-section">
-            <h4>Priority</h4>
-            <div class="filter-options" id="priorityFilters">
-                <label><input type="checkbox" value="urgent" data-filter="priority"> Urgent</label>
-                <label><input type="checkbox" value="high" data-filter="priority"> High</label>
-                <label><input type="checkbox" value="medium" data-filter="priority"> Medium</label>
-                <label><input type="checkbox" value="low" data-filter="priority"> Low</label>
+    <!-- Filter Bar -->
+    <div id="filterBar" class="filter-bar">
+        <button class="filter-toggle" id="filterToggle" aria-expanded="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Filters</span>
+            <span class="filter-count" id="filterCount"></span>
+        </button>
+        <div class="filter-content" id="filterContent">
+            <div class="filter-group">
+                <span class="filter-label">Priority</span>
+                <div class="filter-chips" id="priorityFilters">
+                    <label class="filter-chip" data-priority="urgent"><input type="checkbox" value="urgent" data-filter="priority"><span>Urgent</span></label>
+                    <label class="filter-chip" data-priority="high"><input type="checkbox" value="high" data-filter="priority"><span>High</span></label>
+                    <label class="filter-chip" data-priority="medium"><input type="checkbox" value="medium" data-filter="priority"><span>Medium</span></label>
+                    <label class="filter-chip" data-priority="low"><input type="checkbox" value="low" data-filter="priority"><span>Low</span></label>
+                </div>
             </div>
-        </div>
-        <div class="filter-section">
-            <h4>Tags</h4>
-            <div class="filter-options" id="tagFilters">
-                <!-- Dynamically populated -->
+            <div class="filter-divider"></div>
+            <div class="filter-group">
+                <span class="filter-label">Tags</span>
+                <div class="filter-chips" id="tagFilters">
+                    <!-- Dynamically populated -->
+                </div>
             </div>
-        </div>
-        <div class="filter-actions">
-            <button class="btn-ghost" id="clearFiltersBtn">Clear all</button>
+            <button class="filter-clear" id="clearFiltersBtn">Clear</button>
         </div>
     </div>
 

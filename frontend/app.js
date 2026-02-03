@@ -20,7 +20,10 @@ const confirmModal = document.getElementById('confirmModal');
 const loginForm = document.getElementById('loginForm');
 const cardForm = document.getElementById('cardForm');
 const board = document.getElementById('board');
-const filterPanel = document.getElementById('filterPanel');
+const filterContent = document.getElementById('filterContent');
+const filterToggle = document.getElementById('filterToggle');
+const filterCount = document.getElementById('filterCount');
+const clearFiltersBtn = document.getElementById('clearFiltersBtn');
 const tagFiltersContainer = document.getElementById('tagFilters');
 
 // Initialize
@@ -54,8 +57,8 @@ function setupEventListeners() {
     document.getElementById('statsBtn').addEventListener('click', openStatsModal);
 
     // Filters
-    document.getElementById('filterBtn').addEventListener('click', toggleFilterPanel);
-    document.getElementById('clearFiltersBtn').addEventListener('click', clearFilters);
+    filterToggle.addEventListener('click', toggleFilterPanel);
+    clearFiltersBtn.addEventListener('click', clearFilters);
     document.getElementById('priorityFilters').addEventListener('change', handleFilterChange);
     tagFiltersContainer.addEventListener('change', handleFilterChange);
 
@@ -233,8 +236,22 @@ function updateCardCounts(counts) {
 
 // Filters
 function toggleFilterPanel() {
-    const isVisible = filterPanel.style.display !== 'none';
-    filterPanel.style.display = isVisible ? 'none' : 'block';
+    const isExpanded = filterContent.classList.toggle('expanded');
+    filterToggle.setAttribute('aria-expanded', isExpanded);
+}
+
+function updateFilterUI() {
+    const totalActive = activeFilters.priorities.size + activeFilters.tags.size;
+    
+    // Update count badge
+    if (totalActive > 0) {
+        filterCount.textContent = totalActive;
+        filterCount.classList.add('active');
+        clearFiltersBtn.classList.add('visible');
+    } else {
+        filterCount.classList.remove('active');
+        clearFiltersBtn.classList.remove('visible');
+    }
 }
 
 function populateTagFilters() {
@@ -253,13 +270,15 @@ function populateTagFilters() {
     tagFiltersContainer.innerHTML = '';
     
     if (allTags.size === 0) {
-        tagFiltersContainer.innerHTML = '<span style="color: var(--text-3); font-size: 0.875rem;">No tags yet</span>';
+        tagFiltersContainer.innerHTML = '<span style="color: var(--text-3); font-size: 12px;">No tags</span>';
         return;
     }
 
     const sortedTags = Array.from(allTags).sort();
     sortedTags.forEach(tag => {
         const label = document.createElement('label');
+        label.className = 'filter-chip';
+        
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.value = tag;
@@ -270,10 +289,16 @@ function populateTagFilters() {
             checkbox.checked = true;
         }
         
+        const span = document.createElement('span');
+        span.textContent = tag;
+        
         label.appendChild(checkbox);
-        label.appendChild(document.createTextNode(tag));
+        label.appendChild(span);
         tagFiltersContainer.appendChild(label);
     });
+    
+    // Update filter UI to reflect any restored filters
+    updateFilterUI();
 }
 
 function handleFilterChange(e) {
@@ -297,6 +322,7 @@ function handleFilterChange(e) {
     }
     
     applyFilters();
+    updateFilterUI();
 }
 
 function applyFilters() {
@@ -357,11 +383,12 @@ function clearFilters() {
     activeFilters.tags.clear();
     
     // Uncheck all filter checkboxes
-    document.querySelectorAll('#filterPanel input[type="checkbox"]').forEach(checkbox => {
+    document.querySelectorAll('#filterContent input[type="checkbox"]').forEach(checkbox => {
         checkbox.checked = false;
     });
     
     applyFilters();
+    updateFilterUI();
 }
 
 function createCardElement(card) {
