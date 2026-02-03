@@ -7,10 +7,6 @@ let authToken = localStorage.getItem('blaze_token') || '';
 let currentEditCard = null;
 let cardToDelete = null;
 let initialFormState = null;
-let activeFilters = {
-    priorities: new Set(),
-    tags: new Set()
-};
 
 // DOM Elements
 const loginModal = document.getElementById('loginModal');
@@ -20,14 +16,11 @@ const confirmModal = document.getElementById('confirmModal');
 const loginForm = document.getElementById('loginForm');
 const cardForm = document.getElementById('cardForm');
 const board = document.getElementById('board');
-const filterContent = document.getElementById('filterContent');
-const filterToggle = document.getElementById('filterToggle');
-const filterCount = document.getElementById('filterCount');
-const clearFiltersBtn = document.getElementById('clearFiltersBtn');
-const tagFiltersContainer = document.getElementById('tagFilters');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    Filters.init();
+    
     if (!authToken) {
         showLoginModal();
     } else {
@@ -55,12 +48,6 @@ function setupEventListeners() {
 
     // Stats
     document.getElementById('statsBtn').addEventListener('click', openStatsModal);
-
-    // Filters
-    filterToggle.addEventListener('click', toggleFilterPanel);
-    clearFiltersBtn.addEventListener('click', clearFilters);
-    document.getElementById('priorityFilters').addEventListener('change', handleFilterChange);
-    tagFiltersContainer.addEventListener('change', handleFilterChange);
 
     // Confirm Delete
     document.getElementById('confirmCancel').addEventListener('click', () => confirmModal.close());
@@ -219,8 +206,8 @@ function renderBoard(columns) {
     });
 
     updateCardCounts(counts);
-    populateTagFilters();
-    applyFilters();
+    Filters.populateTags();
+    Filters.apply();
 }
 
 function updateCardCounts(counts) {
@@ -232,163 +219,6 @@ function updateCardCounts(counts) {
             countEl.textContent = count > 0 ? `(${count})` : '';
         }
     });
-}
-
-// Filters
-function toggleFilterPanel() {
-    const isExpanded = filterContent.classList.toggle('expanded');
-    filterToggle.setAttribute('aria-expanded', isExpanded);
-}
-
-function updateFilterUI() {
-    const totalActive = activeFilters.priorities.size + activeFilters.tags.size;
-    
-    // Update count badge
-    if (totalActive > 0) {
-        filterCount.textContent = totalActive;
-        filterCount.classList.add('active');
-        clearFiltersBtn.classList.add('visible');
-    } else {
-        filterCount.classList.remove('active');
-        clearFiltersBtn.classList.remove('visible');
-    }
-}
-
-function populateTagFilters() {
-    // Collect all unique tags from all cards
-    const allTags = new Set();
-    document.querySelectorAll('.card').forEach(card => {
-        const tags = card.dataset.tags;
-        if (tags) {
-            tags.split(',').forEach(tag => {
-                if (tag.trim()) allTags.add(tag.trim());
-            });
-        }
-    });
-
-    // Clear and repopulate tag filters
-    tagFiltersContainer.innerHTML = '';
-    
-    if (allTags.size === 0) {
-        tagFiltersContainer.innerHTML = '<span style="color: var(--text-3); font-size: 12px;">No tags</span>';
-        return;
-    }
-
-    const sortedTags = Array.from(allTags).sort();
-    sortedTags.forEach(tag => {
-        const label = document.createElement('label');
-        label.className = 'filter-chip';
-        
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.value = tag;
-        checkbox.dataset.filter = 'tag';
-        
-        // Restore checked state if this tag was previously selected
-        if (activeFilters.tags.has(tag)) {
-            checkbox.checked = true;
-        }
-        
-        const span = document.createElement('span');
-        span.textContent = tag;
-        
-        label.appendChild(checkbox);
-        label.appendChild(span);
-        tagFiltersContainer.appendChild(label);
-    });
-    
-    // Update filter UI to reflect any restored filters
-    updateFilterUI();
-}
-
-function handleFilterChange(e) {
-    if (!e.target.matches('input[type="checkbox"]')) return;
-    
-    const filterType = e.target.dataset.filter;
-    const value = e.target.value;
-    
-    if (filterType === 'priority') {
-        if (e.target.checked) {
-            activeFilters.priorities.add(value);
-        } else {
-            activeFilters.priorities.delete(value);
-        }
-    } else if (filterType === 'tag') {
-        if (e.target.checked) {
-            activeFilters.tags.add(value);
-        } else {
-            activeFilters.tags.delete(value);
-        }
-    }
-    
-    applyFilters();
-    updateFilterUI();
-}
-
-function applyFilters() {
-    const hasPriorityFilter = activeFilters.priorities.size > 0;
-    const hasTagFilter = activeFilters.tags.size > 0;
-    const hasAnyFilter = hasPriorityFilter || hasTagFilter;
-    
-    document.querySelectorAll('.card').forEach(card => {
-        let visible = true;
-        
-        // Check priority filter
-        if (hasPriorityFilter) {
-            const cardPriority = card.dataset.priority;
-            if (!activeFilters.priorities.has(cardPriority)) {
-                visible = false;
-            }
-        }
-        
-        // Check tag filter (if no priority filter or priority matched)
-        if (visible && hasTagFilter) {
-            const cardTags = card.dataset.tags ? card.dataset.tags.split(',') : [];
-            const hasMatchingTag = cardTags.some(tag => activeFilters.tags.has(tag.trim()));
-            if (!hasMatchingTag) {
-                visible = false;
-            }
-        }
-        
-        // Apply visibility
-        if (visible) {
-            card.classList.remove('filtered-out');
-        } else {
-            card.classList.add('filtered-out');
-        }
-    });
-    
-    // Update empty states
-    document.querySelectorAll('.cards').forEach(container => {
-        const visibleCards = container.querySelectorAll('.card:not(.filtered-out)');
-        const emptyState = container.querySelector('.empty-state');
-        
-        if (visibleCards.length === 0 && hasAnyFilter) {
-            if (!emptyState) {
-                const div = document.createElement('div');
-                div.className = 'empty-state';
-                div.textContent = 'No matching cards';
-                container.appendChild(div);
-            } else {
-                emptyState.textContent = 'No matching cards';
-            }
-        } else if (emptyState && !hasAnyFilter) {
-            emptyState.textContent = 'No cards yet';
-        }
-    });
-}
-
-function clearFilters() {
-    activeFilters.priorities.clear();
-    activeFilters.tags.clear();
-    
-    // Uncheck all filter checkboxes
-    document.querySelectorAll('#filterContent input[type="checkbox"]').forEach(checkbox => {
-        checkbox.checked = false;
-    });
-    
-    applyFilters();
-    updateFilterUI();
 }
 
 function createCardElement(card) {
