@@ -495,6 +495,7 @@ dialog article header {
     padding: 0 0 1rem 0;
     margin-bottom: 1rem;
     border-bottom: 1px solid var(--border);
+    background: transparent;
 }
 
 dialog article header h3 {
@@ -530,20 +531,23 @@ dialog .close-btn::before {
     font-size: 1rem;
 }
 
-dialog article footer {
-    display: flex;
+dialog article footer,
+dialog form footer {
+    display: flex !important;
     justify-content: flex-end;
     gap: 0.75rem;
     padding-top: 1.25rem;
     margin-top: 1rem;
     border-top: 1px solid var(--border-subtle);
+    background: transparent;
 }
 
 dialog article footer button,
 dialog form footer button {
-    flex: 0 0 auto;
-    width: auto;
+    flex: 0 0 auto !important;
+    width: auto !important;
     min-width: 5rem;
+    grid-column: auto !important;
 }
 
 /* Form elements */
