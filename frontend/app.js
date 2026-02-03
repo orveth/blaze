@@ -25,6 +25,8 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoginModal();
     } else {
         loadBoard();
+        // Initialize WebSocket after auth
+        BoardSync.init();
     }
 
     setupEventListeners();
@@ -110,6 +112,8 @@ async function handleLogin(e) {
         localStorage.setItem('blaze_token', authToken);
         loginModal.close();
         loadBoard();
+        // Initialize WebSocket after successful login
+        BoardSync.init();
     } catch (error) {
         showToast(error.message, 'error');
     }
@@ -118,6 +122,8 @@ async function handleLogin(e) {
 function handleLogout() {
     authToken = '';
     localStorage.removeItem('blaze_token');
+    // Disconnect WebSocket on logout
+    BoardSync.disconnect();
     showLoginModal();
     clearBoard();
 }
