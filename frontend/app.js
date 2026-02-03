@@ -41,6 +41,7 @@ function setupEventListeners() {
         cardToDelete = currentEditCard;
         confirmModal.showModal();
     });
+    document.getElementById('cancelCardBtn').addEventListener('click', () => cardModal.close());
 
     // Stats
     document.getElementById('statsBtn').addEventListener('click', openStatsModal);
@@ -59,6 +60,15 @@ function setupEventListeners() {
     // Close buttons
     document.querySelectorAll('.close-btn').forEach(btn => {
         btn.addEventListener('click', () => btn.closest('dialog').close());
+    });
+
+    // Escape key to close modals
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            [cardModal, statsModal, confirmModal].forEach(modal => {
+                if (modal.open) modal.close();
+            });
+        }
     });
 }
 
@@ -87,7 +97,7 @@ async function handleLogin(e) {
         localStorage.setItem('kanban_token', authToken);
         loginModal.close();
         loadBoard();
-        showToast('Logged in successfully', 'success');
+        showToast('Logged in', 'success');
     } catch (error) {
         showToast(error.message, 'error');
     }
@@ -127,7 +137,6 @@ async function apiCall(endpoint, options = {}) {
         throw new Error(error.detail || 'Request failed');
     }
 
-    // Handle 204 No Content
     if (response.status === 204) {
         return null;
     }
@@ -150,11 +159,12 @@ function clearBoard() {
     document.querySelectorAll('.cards').forEach(container => {
         container.innerHTML = '';
     });
+    updateCardCounts({});
 }
 
 function showLoading() {
     document.querySelectorAll('.cards').forEach(container => {
-        container.innerHTML = '<div class="loading">Loading</div>';
+        container.innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading</span></div>';
     });
 }
 
@@ -164,19 +174,37 @@ function renderBoard(columns) {
         container.innerHTML = '';
     });
 
+    // Track counts for each column
+    const counts = {};
+
     // Render cards in each column
     Object.entries(columns).forEach(([columnName, cards]) => {
         const container = document.querySelector(`.cards[data-column="${columnName}"]`);
         if (!container) return;
 
+        counts[columnName] = cards.length;
+
         if (cards.length === 0) {
-            container.innerHTML = '<div class="empty-column">No cards</div>';
+            container.innerHTML = '<div class="empty-state">No cards yet</div>';
             return;
         }
 
         cards.forEach(card => {
             container.appendChild(createCardElement(card));
         });
+    });
+
+    updateCardCounts(counts);
+}
+
+function updateCardCounts(counts) {
+    document.querySelectorAll('.column').forEach(column => {
+        const columnName = column.dataset.column;
+        const countEl = column.querySelector('.card-count');
+        if (countEl) {
+            const count = counts[columnName] || 0;
+            countEl.textContent = count > 0 ? `(${count})` : '';
+        }
     });
 }
 
@@ -187,13 +215,20 @@ function createCardElement(card) {
     div.dataset.id = card.id;
     div.dataset.priority = card.priority;
 
-    // Check if overdue (only for non-done cards with due dates)
+    // Check dates for styling
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    let dueClass = '';
     if (card.due_date && card.column !== 'done') {
         const dueDate = new Date(card.due_date);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (dueDate < today) {
+        const daysDiff = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+        
+        if (daysDiff < 0) {
             div.classList.add('overdue');
+            dueClass = 'overdue';
+        } else if (daysDiff <= 2) {
+            dueClass = 'soon';
         }
     }
 
@@ -209,11 +244,8 @@ function createCardElement(card) {
 
     if (card.due_date) {
         const dueDate = new Date(card.due_date);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const isOverdue = dueDate < today && card.column !== 'done';
         const formattedDate = dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        metaParts.push(`<span class="card-due ${isOverdue ? 'overdue' : ''}">📅 ${formattedDate}</span>`);
+        metaParts.push(`<span class="card-due ${dueClass}">${formattedDate}</span>`);
     }
 
     if (card.tags && card.tags.length > 0) {
@@ -271,14 +303,14 @@ function setupDragAndDrop() {
             const cardId = e.dataTransfer.getData('text/plain');
             const newColumn = container.dataset.column;
 
-            // Find the card element and its current container BEFORE moving
             const card = document.querySelector(`.card[data-id="${cardId}"]`);
             if (!card) return;
 
             const oldContainer = card.parentElement;
+            const oldColumn = oldContainer.dataset.column;
 
             // Skip if dropping in same column
-            if (oldContainer === container) return;
+            if (oldColumn === newColumn) return;
 
             try {
                 await apiCall(`/cards/${cardId}/move`, {
@@ -287,7 +319,7 @@ function setupDragAndDrop() {
                 });
 
                 // Remove empty state from target if present
-                const emptyState = container.querySelector('.empty-column');
+                const emptyState = container.querySelector('.empty-state');
                 if (emptyState) emptyState.remove();
 
                 // Move the card element
@@ -295,15 +327,223 @@ function setupDragAndDrop() {
 
                 // Add empty state to old column if now empty
                 if (oldContainer && oldContainer.querySelectorAll('.card').length === 0) {
-                    oldContainer.innerHTML = '<div class="empty-column">No cards</div>';
+                    oldContainer.innerHTML = '<div class="empty-state">No cards yet</div>';
+                }
+
+                // Update counts
+                const oldCount = oldContainer.closest('.column').querySelector('.card-count');
+                const newCount = container.closest('.column').querySelector('.card-count');
+                
+                if (oldCount) {
+                    const oldNum = parseInt(oldCount.textContent.replace(/[()]/g, '')) || 0;
+                    oldCount.textContent = oldNum - 1 > 0 ? `(${oldNum - 1})` : '';
+                }
+                if (newCount) {
+                    const newNum = parseInt(newCount.textContent.replace(/[()]/g, '')) || 0;
+                    newCount.textContent = `(${newNum + 1})`;
                 }
 
                 showToast('Card moved', 'success');
             } catch (error) {
-                showToast(`Failed to move card: ${error.message}`, 'error');
-                loadBoard(); // Refresh to restore state
+                showToast(`Failed to move: ${error.message}`, 'error');
+                loadBoard();
             }
         });
+    });
+
+    // Touch support for mobile
+    setupTouchDrag();
+}
+
+// Touch drag support
+function setupTouchDrag() {
+    let dragState = null;
+
+    // Cleanup helper
+    function cleanup() {
+        if (!dragState) return;
+        
+        if (dragState.longPressTimer) {
+            clearTimeout(dragState.longPressTimer);
+        }
+        if (dragState.ghost) {
+            dragState.ghost.remove();
+        }
+        if (dragState.card) {
+            dragState.card.classList.remove('touch-dragging-source');
+        }
+        document.querySelectorAll('.cards.drag-over').forEach(el => el.classList.remove('drag-over'));
+        document.body.classList.remove('touch-dragging');
+        dragState = null;
+    }
+
+    // Haptic feedback
+    function vibrate(pattern = 20) {
+        if (navigator.vibrate) {
+            navigator.vibrate(pattern);
+        }
+    }
+
+    board.addEventListener('touchstart', (e) => {
+        const card = e.target.closest('.card');
+        if (!card) return;
+
+        const touch = e.touches[0];
+        const rect = card.getBoundingClientRect();
+
+        dragState = {
+            card: card,
+            startX: touch.clientX,
+            startY: touch.clientY,
+            offsetX: touch.clientX - rect.left,
+            offsetY: touch.clientY - rect.top,
+            isDragging: false,
+            ghost: null,
+            longPressTimer: null
+        };
+
+        // Long press to initiate drag (350ms)
+        dragState.longPressTimer = setTimeout(() => {
+            if (!dragState) return;
+            
+            // Create ghost clone
+            const ghost = card.cloneNode(true);
+            ghost.classList.add('touch-drag-ghost');
+            ghost.style.width = rect.width + 'px';
+            ghost.style.left = (touch.clientX - dragState.offsetX) + 'px';
+            ghost.style.top = (touch.clientY - dragState.offsetY) + 'px';
+            document.body.appendChild(ghost);
+            
+            // Mark source card
+            card.classList.add('touch-dragging-source');
+            document.body.classList.add('touch-dragging');
+            
+            dragState.ghost = ghost;
+            dragState.isDragging = true;
+            
+            // Haptic feedback
+            vibrate(30);
+        }, 350);
+    }, { passive: true });
+
+    board.addEventListener('touchmove', (e) => {
+        if (!dragState) return;
+
+        const touch = e.touches[0];
+        const moveX = Math.abs(touch.clientX - dragState.startX);
+        const moveY = Math.abs(touch.clientY - dragState.startY);
+
+        // Cancel long press if user starts scrolling before it triggers
+        if (!dragState.isDragging && (moveX > 10 || moveY > 10)) {
+            if (dragState.longPressTimer) {
+                clearTimeout(dragState.longPressTimer);
+                dragState.longPressTimer = null;
+            }
+            dragState = null;
+            return;
+        }
+
+        if (!dragState.isDragging) return;
+
+        e.preventDefault();
+
+        // Move ghost
+        dragState.ghost.style.left = (touch.clientX - dragState.offsetX) + 'px';
+        dragState.ghost.style.top = (touch.clientY - dragState.offsetY) + 'px';
+
+        // Find drop target (ghost has pointer-events: none, so we can detect through it)
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
+        const dropZone = target?.closest('.cards');
+        
+        // Update drop zone highlights
+        document.querySelectorAll('.cards.drag-over').forEach(el => {
+            if (el !== dropZone) el.classList.remove('drag-over');
+        });
+        
+        if (dropZone && !dropZone.classList.contains('drag-over')) {
+            dropZone.classList.add('drag-over');
+            vibrate(10);
+        }
+    }, { passive: false });
+
+    async function handleDrop(touch) {
+        if (!dragState || !dragState.isDragging) {
+            cleanup();
+            return;
+        }
+
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
+        const dropZone = target?.closest('.cards');
+        const card = dragState.card;
+        const oldContainer = card.parentElement;
+
+        cleanup();
+
+        if (dropZone && dropZone !== oldContainer) {
+            const cardId = card.dataset.id;
+            const newColumn = dropZone.dataset.column;
+
+            try {
+                await apiCall(`/cards/${cardId}/move`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ column: newColumn })
+                });
+
+                const emptyState = dropZone.querySelector('.empty-state');
+                if (emptyState) emptyState.remove();
+
+                dropZone.appendChild(card);
+
+                if (oldContainer.querySelectorAll('.card').length === 0) {
+                    oldContainer.innerHTML = '<div class="empty-state">No cards yet</div>';
+                }
+
+                // Update counts
+                const oldCount = oldContainer.closest('.column').querySelector('.card-count');
+                const newCount = dropZone.closest('.column').querySelector('.card-count');
+                
+                if (oldCount) {
+                    const oldNum = parseInt(oldCount.textContent.replace(/[()]/g, '')) || 0;
+                    oldCount.textContent = oldNum - 1 > 0 ? `(${oldNum - 1})` : '';
+                }
+                if (newCount) {
+                    const newNum = parseInt(newCount.textContent.replace(/[()]/g, '')) || 0;
+                    newCount.textContent = `(${newNum + 1})`;
+                }
+
+                vibrate([20, 50, 20]);
+                showToast('Card moved', 'success');
+            } catch (error) {
+                showToast(`Failed to move: ${error.message}`, 'error');
+                loadBoard();
+            }
+        }
+    }
+
+    board.addEventListener('touchend', (e) => {
+        if (!dragState) return;
+        
+        if (dragState.longPressTimer) {
+            clearTimeout(dragState.longPressTimer);
+        }
+
+        if (!dragState.isDragging) {
+            dragState = null;
+            return;
+        }
+
+        handleDrop(e.changedTouches[0]);
+    });
+
+    board.addEventListener('touchcancel', () => {
+        cleanup();
+    });
+
+    // Also cleanup if touch leaves the document
+    document.addEventListener('touchend', (e) => {
+        if (dragState && dragState.isDragging && !board.contains(e.target)) {
+            cleanup();
+        }
     });
 }
 
@@ -323,7 +563,6 @@ function openCardModal(card = null) {
         document.getElementById('cardPriority').value = card.priority;
         document.getElementById('cardColumn').value = card.column;
 
-        // Handle due_date - extract just the date part if present
         if (card.due_date) {
             const date = new Date(card.due_date);
             document.getElementById('cardDueDate').value = date.toISOString().split('T')[0];
@@ -377,7 +616,7 @@ async function handleSaveCard(e) {
         cardModal.close();
         loadBoard();
     } catch (error) {
-        showToast(`Failed to save card: ${error.message}`, 'error');
+        showToast(`Failed to save: ${error.message}`, 'error');
     }
 }
 
@@ -394,7 +633,7 @@ async function handleDeleteCard() {
         loadBoard();
         showToast('Card deleted', 'success');
     } catch (error) {
-        showToast(`Failed to delete card: ${error.message}`, 'error');
+        showToast(`Failed to delete: ${error.message}`, 'error');
     }
 
     cardToDelete = null;
@@ -403,69 +642,71 @@ async function handleDeleteCard() {
 // Stats Modal
 async function openStatsModal() {
     const content = document.getElementById('statsContent');
-    content.innerHTML = '<div class="loading">Loading</div>';
+    content.innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading</span></div>';
     statsModal.showModal();
 
     try {
         const stats = await apiCall('/board/stats');
         renderStats(stats);
     } catch (error) {
-        content.innerHTML = `<p>Failed to load stats: ${escapeHtml(error.message)}</p>`;
+        content.innerHTML = `<p style="color: var(--priority-urgent)">Failed to load: ${escapeHtml(error.message)}</p>`;
     }
 }
 
 function renderStats(stats) {
     const content = document.getElementById('statsContent');
 
+    const columnNames = {
+        backlog: 'Backlog',
+        todo: 'To Do',
+        in_progress: 'In Progress',
+        review: 'Review',
+        done: 'Done'
+    };
+
+    const priorityNames = {
+        low: 'Low',
+        medium: 'Medium',
+        high: 'High',
+        urgent: 'Urgent'
+    };
+
     let html = `
-        <div class="stat-row">
-            <span class="stat-label">Total Cards</span>
-            <span class="stat-value">${stats.total_cards}</span>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <span class="stat-label">Total Cards</span>
+                <span class="stat-value">${stats.total_cards}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Overdue</span>
+                <span class="stat-value" style="color: var(--priority-urgent)">${stats.overdue_count}</span>
+            </div>
         </div>
-        <div class="stat-row">
-            <span class="stat-label">Overdue</span>
-            <span class="stat-value" style="color: var(--priority-urgent)">${stats.overdue_count}</span>
+
+        <div class="stats-section">
+            <h4>By Column</h4>
+            <div class="stats-grid">
+                ${Object.entries(stats.by_column).map(([col, count]) => `
+                    <div class="stat-item">
+                        <span class="stat-label">${columnNames[col] || col}</span>
+                        <span class="stat-value">${count}</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+
+        <div class="stats-section">
+            <h4>By Priority</h4>
+            <div class="stats-grid">
+                ${Object.entries(stats.by_priority).map(([priority, count]) => `
+                    <div class="stat-item">
+                        <span class="stat-label">${priorityNames[priority] || priority}</span>
+                        <span class="stat-value">${count}</span>
+                    </div>
+                `).join('')}
+            </div>
         </div>
     `;
-
-    // By Column
-    const columnNames = {
-        backlog: '📥 Backlog',
-        todo: '📋 To Do',
-        in_progress: '🔨 In Progress',
-        review: '👀 Review',
-        done: '✅ Done'
-    };
-
-    html += '<div class="stat-section"><h4>By Column</h4>';
-    Object.entries(stats.by_column).forEach(([col, count]) => {
-        html += `
-            <div class="stat-row">
-                <span class="stat-label">${columnNames[col] || col}</span>
-                <span class="stat-value">${count}</span>
-            </div>
-        `;
-    });
-    html += '</div>';
-
-    // By Priority
-    const priorityNames = {
-        low: '🟢 Low',
-        medium: '🟡 Medium',
-        high: '🟠 High',
-        urgent: '🔴 Urgent'
-    };
-
-    html += '<div class="stat-section"><h4>By Priority</h4>';
-    Object.entries(stats.by_priority).forEach(([priority, count]) => {
-        html += `
-            <div class="stat-row">
-                <span class="stat-label">${priorityNames[priority] || priority}</span>
-                <span class="stat-value">${count}</span>
-            </div>
-        `;
-    });
-    html += '</div>';
 
     content.innerHTML = html;
 }
@@ -479,12 +720,7 @@ function escapeHtml(text) {
 
 // Toast Notifications
 function showToast(message, type = 'info') {
-    let container = document.querySelector('.toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.className = 'toast-container';
-        document.body.appendChild(container);
-    }
+    const container = document.getElementById('toastContainer');
 
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
@@ -492,8 +728,7 @@ function showToast(message, type = 'info') {
     container.appendChild(toast);
 
     setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(100%)';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
+        toast.classList.add('exiting');
+        setTimeout(() => toast.remove(), 200);
+    }, 2500);
 }
