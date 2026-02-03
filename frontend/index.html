@@ -3,85 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#1a1814">
+    <meta name="theme-color" content="#0f0f0e">
     <meta name="color-scheme" content="dark">
-    <title>Cairn</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <title>Blaze</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <header>
+        <div class="header-left">
+            <h1 class="logo">
+                <svg class="blaze-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M12 3L12 21M7 8L12 3L17 8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Blaze
+            </h1>
+        </div>
         <nav>
-            <ul>
-                <li><strong class="logo"><span>◈</span> Cairn</strong></li>
-            </ul>
-            <ul>
-                <li><button class="outline" id="statsBtn">Stats</button></li>
-                <li><button id="addCardBtn">Add Card</button></li>
-                <li><button class="outline secondary" id="logoutBtn">Logout</button></li>
-            </ul>
+            <button class="nav-btn" id="statsBtn" title="Statistics">Stats</button>
+            <button class="nav-btn primary" id="addCardBtn" title="Add card">+ New</button>
+            <button class="nav-btn" id="logoutBtn" title="Logout">Logout</button>
         </nav>
     </header>
 
-    <main class="container-fluid">
+    <main>
         <div id="board" class="board">
-            <div class="column" data-column="backlog">
-                <h3>Backlog <span class="card-count"></span></h3>
+            <section class="column" data-column="backlog">
+                <header class="column-header">
+                    <h2>Backlog</h2>
+                    <span class="card-count"></span>
+                </header>
                 <div class="cards" data-column="backlog"></div>
-            </div>
-            <div class="column" data-column="todo">
-                <h3>To Do <span class="card-count"></span></h3>
+            </section>
+            <section class="column" data-column="todo">
+                <header class="column-header">
+                    <h2>To Do</h2>
+                    <span class="card-count"></span>
+                </header>
                 <div class="cards" data-column="todo"></div>
-            </div>
-            <div class="column" data-column="in_progress">
-                <h3>In Progress <span class="card-count"></span></h3>
+            </section>
+            <section class="column" data-column="in_progress">
+                <header class="column-header">
+                    <h2>In Progress</h2>
+                    <span class="card-count"></span>
+                </header>
                 <div class="cards" data-column="in_progress"></div>
-            </div>
-            <div class="column" data-column="review">
-                <h3>Review <span class="card-count"></span></h3>
+            </section>
+            <section class="column" data-column="review">
+                <header class="column-header">
+                    <h2>Review</h2>
+                    <span class="card-count"></span>
+                </header>
                 <div class="cards" data-column="review"></div>
-            </div>
-            <div class="column" data-column="done">
-                <h3>Done <span class="card-count"></span></h3>
+            </section>
+            <section class="column" data-column="done">
+                <header class="column-header">
+                    <h2>Done</h2>
+                    <span class="card-count"></span>
+                </header>
                 <div class="cards" data-column="done"></div>
-            </div>
+            </section>
         </div>
     </main>
 
     <!-- Login Modal -->
     <dialog id="loginModal">
-        <article>
-            <header>
-                <h3>Login</h3>
-            </header>
+        <div class="modal-content">
+            <h3>Sign in</h3>
             <form id="loginForm">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required autofocus placeholder="Enter password">
-                <footer>
-                    <button type="submit">Login</button>
-                </footer>
+                <input type="password" id="password" name="password" required autofocus placeholder="Token">
+                <button type="submit">Continue</button>
             </form>
-        </article>
+        </div>
     </dialog>
 
     <!-- Card Modal -->
     <dialog id="cardModal">
-        <article>
-            <header>
-                <h3 id="cardModalTitle">New Card</h3>
-                <button type="button" aria-label="Close" class="close-btn"></button>
+        <div class="modal-content">
+            <header class="modal-header">
+                <h3 id="cardModalTitle">New card</h3>
+                <button type="button" class="close-btn" aria-label="Close">&times;</button>
             </header>
             <form id="cardForm">
                 <input type="hidden" id="cardId" name="cardId">
                 
-                <label for="cardTitle">Title</label>
-                <input type="text" id="cardTitle" name="title" required maxlength="200" placeholder="What needs to be done?">
+                <div class="field">
+                    <input type="text" id="cardTitle" name="title" required maxlength="200" placeholder="What needs to be done?">
+                </div>
                 
-                <label for="cardDescription">Description</label>
-                <textarea id="cardDescription" name="description" rows="3" placeholder="Add details..."></textarea>
+                <div class="field">
+                    <textarea id="cardDescription" name="description" rows="2" placeholder="Notes (optional)"></textarea>
+                </div>
                 
-                <div class="form-row">
-                    <div>
+                <div class="field-row">
+                    <div class="field">
                         <label for="cardPriority">Priority</label>
                         <select id="cardPriority" name="priority">
                             <option value="low">Low</option>
@@ -90,7 +104,7 @@
                             <option value="urgent">Urgent</option>
                         </select>
                     </div>
-                    <div>
+                    <div class="field">
                         <label for="cardColumn">Column</label>
                         <select id="cardColumn" name="column">
                             <option value="backlog">Backlog</option>
@@ -102,49 +116,49 @@
                     </div>
                 </div>
                 
-                <label for="cardDueDate">Due Date</label>
-                <input type="date" id="cardDueDate" name="due_date">
+                <div class="field-row">
+                    <div class="field">
+                        <label for="cardDueDate">Due</label>
+                        <input type="date" id="cardDueDate" name="due_date">
+                    </div>
+                    <div class="field">
+                        <label for="cardTags">Tags</label>
+                        <input type="text" id="cardTags" name="tags" placeholder="comma, separated">
+                    </div>
+                </div>
                 
-                <label for="cardTags">Tags</label>
-                <input type="text" id="cardTags" name="tags" placeholder="Comma-separated tags">
-                
-                <footer>
-                    <button type="button" class="secondary" id="cancelCardBtn">Cancel</button>
-                    <button type="button" class="danger" id="deleteCardBtn" style="display: none;">Delete</button>
+                <footer class="modal-footer">
+                    <button type="button" class="btn-ghost" id="deleteCardBtn" style="display: none;">Delete</button>
+                    <div class="spacer"></div>
+                    <button type="button" class="btn-ghost" id="cancelCardBtn">Cancel</button>
                     <button type="submit" id="saveCardBtn">Save</button>
                 </footer>
             </form>
-        </article>
+        </div>
     </dialog>
 
     <!-- Stats Modal -->
     <dialog id="statsModal">
-        <article>
-            <header>
+        <div class="modal-content">
+            <header class="modal-header">
                 <h3>Statistics</h3>
-                <button type="button" aria-label="Close" class="close-btn"></button>
+                <button type="button" class="close-btn" aria-label="Close">&times;</button>
             </header>
             <div id="statsContent">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <span>Loading...</span>
-                </div>
+                <div class="loading">Loading...</div>
             </div>
-        </article>
+        </div>
     </dialog>
 
     <!-- Confirm Delete Modal -->
     <dialog id="confirmModal">
-        <article>
-            <header>
-                <h3>Delete Card</h3>
-            </header>
-            <p>This can't be undone. Are you sure?</p>
-            <footer>
-                <button class="secondary" id="confirmCancel">Cancel</button>
-                <button class="danger" id="confirmDelete">Delete</button>
+        <div class="modal-content modal-sm">
+            <p>Delete this card? This can't be undone.</p>
+            <footer class="modal-footer">
+                <button class="btn-ghost" id="confirmCancel">Cancel</button>
+                <button class="btn-danger" id="confirmDelete">Delete</button>
             </footer>
-        </article>
+        </div>
     </dialog>
 
     <div class="toast-container" id="toastContainer"></div>

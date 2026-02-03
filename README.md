@@ -144,6 +144,7 @@ All endpoints (except `/health` and auth) require `Authorization: Bearer <token>
 ## Roadmap
 
 - [x] NixOS module for deployment
+- [ ] CLI for agent/automation use ([plan](plans/sprint-cli.md))
 - [ ] OpenClaw integration for autonomous task management
 - [ ] WebSocket for real-time updates
 
