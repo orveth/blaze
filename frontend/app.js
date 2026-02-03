@@ -19,6 +19,8 @@ const board = document.getElementById('board');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    Filters.init();
+    
     if (!authToken) {
         showLoginModal();
     } else {
@@ -204,6 +206,8 @@ function renderBoard(columns) {
     });
 
     updateCardCounts(counts);
+    Filters.populateTags();
+    Filters.apply();
 }
 
 function updateCardCounts(counts) {
@@ -223,6 +227,7 @@ function createCardElement(card) {
     div.draggable = true;
     div.dataset.id = card.id;
     div.dataset.priority = card.priority;
+    div.dataset.tags = card.tags ? card.tags.join(',') : '';
 
     // Check dates for styling
     const today = new Date();
