@@ -1,18 +1,18 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.services.kanban;
+  cfg = config.services.blaze;
   
   # Import the package from the flake
-  kanbanPackage = cfg.package;
+  blazePackage = cfg.package;
 in
 {
-  options.services.kanban = {
-    enable = lib.mkEnableOption "Kanban board service";
+  options.services.blaze = {
+    enable = lib.mkEnableOption "Blaze task board service";
 
     package = lib.mkOption {
       type = lib.types.package;
-      description = "The kanban package to use.";
+      description = "The blaze package to use.";
     };
 
     port = lib.mkOption {
@@ -29,7 +29,7 @@ in
 
     dataDir = lib.mkOption {
       type = lib.types.path;
-      default = "/var/lib/kanban";
+      default = "/var/lib/blaze";
       description = "Directory for persistent data.";
     };
 
@@ -50,14 +50,14 @@ in
 
     user = lib.mkOption {
       type = lib.types.str;
-      default = "kanban";
-      description = "User account under which kanban runs.";
+      default = "blaze";
+      description = "User account under which blaze runs.";
     };
 
     group = lib.mkOption {
       type = lib.types.str;
-      default = "kanban";
-      description = "Group under which kanban runs.";
+      default = "blaze";
+      description = "Group under which blaze runs.";
     };
   };
 
@@ -67,21 +67,21 @@ in
       isSystemUser = true;
       group = cfg.group;
       home = cfg.dataDir;
-      description = "Kanban board service user";
+      description = "Blaze task board service user";
     };
 
     users.groups.${cfg.group} = { };
 
     # Systemd service
-    systemd.services.kanban = {
-      description = "Kanban Board Service";
+    systemd.services.blaze = {
+      description = "Blaze Service";
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" ];
 
       environment = {
-        KANBAN_DATA_DIR = cfg.dataDir;
+        BLAZE_DATA_DIR = cfg.dataDir;
       } // lib.optionalAttrs (cfg.passwordFile != null) {
-        KANBAN_TOKEN_FILE = cfg.passwordFile;
+        BLAZE_TOKEN_FILE = cfg.passwordFile;
       };
 
       serviceConfig = {
@@ -91,7 +91,7 @@ in
         WorkingDirectory = cfg.dataDir;
 
         ExecStart = ''
-          ${kanbanPackage}/bin/kanban-server \
+          ${blazePackage}/bin/blaze-server \
             --host ${cfg.host} \
             --port ${toString cfg.port}
         '';
@@ -100,7 +100,7 @@ in
         RestartSec = "5s";
 
         # Create state directory with correct permissions
-        StateDirectory = "kanban";
+        StateDirectory = "blaze";
         StateDirectoryMode = "0750";
 
         # Hardening

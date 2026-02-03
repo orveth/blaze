@@ -16,7 +16,7 @@ class Storage:
 
     def __init__(self, data_path: str | Path | None = None):
         if data_path is None:
-            data_dir = os.environ.get("KANBAN_DATA_DIR", "data")
+            data_dir = os.environ.get("BLAZE_DATA_DIR", "data")
             data_path = Path(data_dir) / "board.json"
         self.data_path = Path(data_path)
         self.data_path.parent.mkdir(parents=True, exist_ok=True)

@@ -1,4 +1,4 @@
-"""FastAPI application for the Kanban board."""
+"""FastAPI application for the Blaze task board."""
 
 import logging
 import secrets
@@ -37,15 +37,15 @@ async def lifespan(app: FastAPI):
     """Application lifespan handler."""
     token = get_api_token()
     logger.info("=" * 50)
-    logger.info("Kanban Board API started")
+    logger.info("Blaze API started")
     logger.info(f"API Token: {token}")
     logger.info("=" * 50)
     yield
-    logger.info("Kanban Board API shutting down")
+    logger.info("Blaze API shutting down")
 
 
 app = FastAPI(
-    title="Kanban Board API",
+    title="Blaze API",
     description="A simple kanban board with drag-and-drop support",
     version="0.2.0",
     lifespan=lifespan,

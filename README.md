@@ -1,6 +1,10 @@
-# Kanban Board
+# Blaze
 
-A simple kanban board with FastAPI backend and vanilla JS frontend.
+A personal task board with FastAPI backend and vanilla JS frontend.
+
+## About the Name
+
+A **blaze** is a mark carved into a tree to guide travelers along a trail — a waypoint showing you're on the right path. Like those trail markers, Blaze helps you mark your progress and find your way through work.
 
 ## Quick Start
 
@@ -21,10 +25,10 @@ uvicorn backend.main:app --host 127.0.0.1 --port 8080 --reload
 
 ```bash
 # Run from GitHub
-nix run github:orveth/kanban
+nix run github:orveth/blaze
 
 # With custom port
-KANBAN_PORT=3000 nix run github:orveth/kanban
+BLAZE_PORT=3000 nix run github:orveth/blaze
 ```
 
 Open http://localhost:8080 in your browser.
@@ -37,7 +41,7 @@ Add to your flake inputs:
 
 ```nix
 {
-  inputs.kanban.url = "github:orveth/kanban";
+  inputs.blaze.url = "github:orveth/blaze";
 }
 ```
 
@@ -46,14 +50,14 @@ Import the module and configure:
 ```nix
 { inputs, ... }:
 {
-  imports = [ inputs.kanban.nixosModules.default ];
+  imports = [ inputs.blaze.nixosModules.default ];
 
-  services.kanban = {
+  services.blaze = {
     enable = true;
     port = 8080;
     host = "127.0.0.1";  # localhost only by default
-    # dataDir = "/var/lib/kanban";  # default
-    # passwordFile = "/run/secrets/kanban-password";  # optional, generates random if null
+    # dataDir = "/var/lib/blaze";  # default
+    # passwordFile = "/run/secrets/blaze-password";  # optional, generates random if null
     # openFirewall = false;  # set true to expose port
   };
 }
@@ -66,18 +70,18 @@ Import the module and configure:
 | `enable` | `false` | Enable the service |
 | `port` | `8080` | Port to listen on |
 | `host` | `"127.0.0.1"` | Bind address (use `0.0.0.0` for all interfaces) |
-| `dataDir` | `"/var/lib/kanban"` | Data directory |
+| `dataDir` | `"/var/lib/blaze"` | Data directory |
 | `passwordFile` | `null` | Path to token file (generates random if null) |
 | `openFirewall` | `false` | Open firewall port |
-| `user` | `"kanban"` | Service user |
-| `group` | `"kanban"` | Service group |
+| `user` | `"blaze"` | Service user |
+| `group` | `"blaze"` | Service group |
 
 ### With sops-nix or agenix
 
 ```nix
-services.kanban = {
+services.blaze = {
   enable = true;
-  passwordFile = config.sops.secrets.kanban-token.path;
+  passwordFile = config.sops.secrets.blaze-token.path;
 };
 ```
 
@@ -85,16 +89,16 @@ services.kanban = {
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `KANBAN_DATA_DIR` | `"data"` | Directory for board.json |
-| `KANBAN_API_TOKEN` | (generated) | API token (or use file) |
-| `KANBAN_TOKEN_FILE` | `"$DATA_DIR/.token"` | Path to token file |
-| `KANBAN_HOST` | `"127.0.0.1"` | Bind address (used by wrapper) |
-| `KANBAN_PORT` | `"8080"` | Port (used by wrapper) |
+| `BLAZE_DATA_DIR` | `"data"` | Directory for board.json |
+| `BLAZE_API_TOKEN` | (generated) | API token (or use file) |
+| `BLAZE_TOKEN_FILE` | `"$DATA_DIR/.token"` | Path to token file |
+| `BLAZE_HOST` | `"127.0.0.1"` | Bind address (used by wrapper) |
+| `BLAZE_PORT` | `"8080"` | Port (used by wrapper) |
 
 ## Structure
 
 ```
-kanban/
+blaze/
 ├── backend/
 │   ├── main.py      # FastAPI app, routes, static file serving
 │   ├── models.py    # Pydantic models (Card, Column, Priority)
@@ -112,7 +116,7 @@ kanban/
 
 ## Features
 
-- **Drag-and-drop** card management
+- **Drag-and-drop** task management
 - **5 columns:** Backlog → Todo → In Progress → Review → Done
 - **Priority levels:** Low (🟢) → Medium (🟡) → High (🟠) → Urgent (🔴)
 - **Due dates** with overdue indicators

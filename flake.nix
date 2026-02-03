@@ -1,5 +1,5 @@
 {
-  description = "Kanban board - FastAPI backend + vanilla JS frontend";
+  description = "Blaze - Personal task board with FastAPI backend + vanilla JS frontend";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
@@ -18,9 +18,9 @@
         ps.pydantic
       ]);
 
-      # The kanban package
-      kanbanPackage = pkgs.stdenv.mkDerivation {
-        pname = "kanban";
+      # The blaze package
+      blazePackage = pkgs.stdenv.mkDerivation {
+        pname = "blaze";
         version = "0.2.0";
 
         src = ./.;
@@ -37,20 +37,20 @@
 
           # Create wrapper script
           mkdir -p $out/bin
-          makeWrapper ${pythonEnv}/bin/uvicorn $out/bin/kanban-server \
+          makeWrapper ${pythonEnv}/bin/uvicorn $out/bin/blaze-server \
             --set PYTHONPATH "$out/lib/kanban" \
             --add-flags "backend.main:app" \
             --add-flags "--host" \
-            --add-flags "\''${KANBAN_HOST:-127.0.0.1}" \
+            --add-flags "\''${BLAZE_HOST:-127.0.0.1}" \
             --add-flags "--port" \
-            --add-flags "\''${KANBAN_PORT:-8080}"
+            --add-flags "\''${BLAZE_PORT:-8080}"
 
           runHook postInstall
         '';
 
         meta = with pkgs.lib; {
-          description = "Personal kanban board with FastAPI backend and vanilla JS frontend";
-          homepage = "https://github.com/orveth/kanban";
+          description = "Personal task board with FastAPI backend and vanilla JS frontend";
+          homepage = "https://github.com/orveth/blaze";
           license = licenses.mit;
           maintainers = [ ];
           platforms = platforms.linux;
@@ -76,25 +76,25 @@
 
       # Packages
       packages.${system} = {
-        default = kanbanPackage;
-        kanban = kanbanPackage;
+        default = blazePackage;
+        blaze = blazePackage;
       };
 
       # NixOS module
       nixosModules = {
         default = import ./module.nix;
-        kanban = import ./module.nix;
+        blaze = import ./module.nix;
       };
 
       # Apps (for `nix run`)
       apps.${system} = {
         default = {
           type = "app";
-          program = "${kanbanPackage}/bin/kanban-server";
+          program = "${blazePackage}/bin/blaze-server";
         };
-        kanban = {
+        blaze = {
           type = "app";
-          program = "${kanbanPackage}/bin/kanban-server";
+          program = "${blazePackage}/bin/blaze-server";
         };
       };
     };
