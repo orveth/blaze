@@ -7,6 +7,10 @@ let authToken = localStorage.getItem('blaze_token') || '';
 let currentEditCard = null;
 let cardToDelete = null;
 let initialFormState = null;
+let activeFilters = {
+    priorities: new Set(),
+    tags: new Set()
+};
 
 // DOM Elements
 const loginModal = document.getElementById('loginModal');
@@ -16,6 +20,8 @@ const confirmModal = document.getElementById('confirmModal');
 const loginForm = document.getElementById('loginForm');
 const cardForm = document.getElementById('cardForm');
 const board = document.getElementById('board');
+const filterPanel = document.getElementById('filterPanel');
+const tagFiltersContainer = document.getElementById('tagFilters');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -46,6 +52,12 @@ function setupEventListeners() {
 
     // Stats
     document.getElementById('statsBtn').addEventListener('click', openStatsModal);
+
+    // Filters
+    document.getElementById('filterBtn').addEventListener('click', toggleFilterPanel);
+    document.getElementById('clearFiltersBtn').addEventListener('click', clearFilters);
+    document.getElementById('priorityFilters').addEventListener('change', handleFilterChange);
+    tagFiltersContainer.addEventListener('change', handleFilterChange);
 
     // Confirm Delete
     document.getElementById('confirmCancel').addEventListener('click', () => confirmModal.close());
@@ -204,6 +216,8 @@ function renderBoard(columns) {
     });
 
     updateCardCounts(counts);
+    populateTagFilters();
+    applyFilters();
 }
 
 function updateCardCounts(counts) {
@@ -217,12 +231,146 @@ function updateCardCounts(counts) {
     });
 }
 
+// Filters
+function toggleFilterPanel() {
+    const isVisible = filterPanel.style.display !== 'none';
+    filterPanel.style.display = isVisible ? 'none' : 'block';
+}
+
+function populateTagFilters() {
+    // Collect all unique tags from all cards
+    const allTags = new Set();
+    document.querySelectorAll('.card').forEach(card => {
+        const tags = card.dataset.tags;
+        if (tags) {
+            tags.split(',').forEach(tag => {
+                if (tag.trim()) allTags.add(tag.trim());
+            });
+        }
+    });
+
+    // Clear and repopulate tag filters
+    tagFiltersContainer.innerHTML = '';
+    
+    if (allTags.size === 0) {
+        tagFiltersContainer.innerHTML = '<span style="color: var(--text-3); font-size: 0.875rem;">No tags yet</span>';
+        return;
+    }
+
+    const sortedTags = Array.from(allTags).sort();
+    sortedTags.forEach(tag => {
+        const label = document.createElement('label');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = tag;
+        checkbox.dataset.filter = 'tag';
+        
+        // Restore checked state if this tag was previously selected
+        if (activeFilters.tags.has(tag)) {
+            checkbox.checked = true;
+        }
+        
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(tag));
+        tagFiltersContainer.appendChild(label);
+    });
+}
+
+function handleFilterChange(e) {
+    if (!e.target.matches('input[type="checkbox"]')) return;
+    
+    const filterType = e.target.dataset.filter;
+    const value = e.target.value;
+    
+    if (filterType === 'priority') {
+        if (e.target.checked) {
+            activeFilters.priorities.add(value);
+        } else {
+            activeFilters.priorities.delete(value);
+        }
+    } else if (filterType === 'tag') {
+        if (e.target.checked) {
+            activeFilters.tags.add(value);
+        } else {
+            activeFilters.tags.delete(value);
+        }
+    }
+    
+    applyFilters();
+}
+
+function applyFilters() {
+    const hasPriorityFilter = activeFilters.priorities.size > 0;
+    const hasTagFilter = activeFilters.tags.size > 0;
+    const hasAnyFilter = hasPriorityFilter || hasTagFilter;
+    
+    document.querySelectorAll('.card').forEach(card => {
+        let visible = true;
+        
+        // Check priority filter
+        if (hasPriorityFilter) {
+            const cardPriority = card.dataset.priority;
+            if (!activeFilters.priorities.has(cardPriority)) {
+                visible = false;
+            }
+        }
+        
+        // Check tag filter (if no priority filter or priority matched)
+        if (visible && hasTagFilter) {
+            const cardTags = card.dataset.tags ? card.dataset.tags.split(',') : [];
+            const hasMatchingTag = cardTags.some(tag => activeFilters.tags.has(tag.trim()));
+            if (!hasMatchingTag) {
+                visible = false;
+            }
+        }
+        
+        // Apply visibility
+        if (visible) {
+            card.classList.remove('filtered-out');
+        } else {
+            card.classList.add('filtered-out');
+        }
+    });
+    
+    // Update empty states
+    document.querySelectorAll('.cards').forEach(container => {
+        const visibleCards = container.querySelectorAll('.card:not(.filtered-out)');
+        const emptyState = container.querySelector('.empty-state');
+        
+        if (visibleCards.length === 0 && hasAnyFilter) {
+            if (!emptyState) {
+                const div = document.createElement('div');
+                div.className = 'empty-state';
+                div.textContent = 'No matching cards';
+                container.appendChild(div);
+            } else {
+                emptyState.textContent = 'No matching cards';
+            }
+        } else if (emptyState && !hasAnyFilter) {
+            emptyState.textContent = 'No cards yet';
+        }
+    });
+}
+
+function clearFilters() {
+    activeFilters.priorities.clear();
+    activeFilters.tags.clear();
+    
+    // Uncheck all filter checkboxes
+    document.querySelectorAll('#filterPanel input[type="checkbox"]').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    
+    applyFilters();
+}
+
 function createCardElement(card) {
     const div = document.createElement('div');
     div.className = 'card';
     div.draggable = true;
     div.dataset.id = card.id;
     div.dataset.priority = card.priority;
+    div.dataset.tags = card.tags ? card.tags.join(',') : '';
 
     // Check dates for styling
     const today = new Date();

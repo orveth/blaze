@@ -19,11 +19,34 @@
             </h1>
         </div>
         <nav>
+            <button class="nav-btn" id="filterBtn" title="Filter cards">Filter</button>
             <button class="nav-btn" id="statsBtn" title="Statistics">Stats</button>
             <button class="nav-btn primary" id="addCardBtn" title="Add card">+ New</button>
             <button class="nav-btn" id="logoutBtn" title="Logout">Logout</button>
         </nav>
     </header>
+    
+    <!-- Filter Panel -->
+    <div id="filterPanel" class="filter-panel" style="display: none;">
+        <div class="filter-section">
+            <h4>Priority</h4>
+            <div class="filter-options" id="priorityFilters">
+                <label><input type="checkbox" value="urgent" data-filter="priority"> Urgent</label>
+                <label><input type="checkbox" value="high" data-filter="priority"> High</label>
+                <label><input type="checkbox" value="medium" data-filter="priority"> Medium</label>
+                <label><input type="checkbox" value="low" data-filter="priority"> Low</label>
+            </div>
+        </div>
+        <div class="filter-section">
+            <h4>Tags</h4>
+            <div class="filter-options" id="tagFilters">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+        <div class="filter-actions">
+            <button class="btn-ghost" id="clearFiltersBtn">Clear all</button>
+        </div>
+    </div>
 
     <main>
         <div id="board" class="board">
