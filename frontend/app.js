@@ -1,9 +1,9 @@
-// Kanban Board Application
+// Blaze Application
 
 const API_BASE = '/api';
 
 // State
-let authToken = localStorage.getItem('kanban_token') || '';
+let authToken = localStorage.getItem('blaze_token') || '';
 let currentEditCard = null;
 let cardToDelete = null;
 
@@ -94,7 +94,7 @@ async function handleLogin(e) {
 
         const data = await response.json();
         authToken = data.token;
-        localStorage.setItem('kanban_token', authToken);
+        localStorage.setItem('blaze_token', authToken);
         loginModal.close();
         loadBoard();
         showToast('Logged in', 'success');
@@ -105,7 +105,7 @@ async function handleLogin(e) {
 
 function handleLogout() {
     authToken = '';
-    localStorage.removeItem('kanban_token');
+    localStorage.removeItem('blaze_token');
     showLoginModal();
     clearBoard();
     showToast('Logged out', 'info');

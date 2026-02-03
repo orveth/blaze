@@ -19,13 +19,13 @@ def get_api_token() -> str:
     global _api_token
     
     # First, check environment variable
-    env_token = os.environ.get("KANBAN_API_TOKEN")
+    env_token = os.environ.get("BLAZE_API_TOKEN")
     if env_token:
         _api_token = env_token
         return _api_token
     
     # Check token file
-    token_file = os.environ.get("KANBAN_TOKEN_FILE", "data/.token")
+    token_file = os.environ.get("BLAZE_TOKEN_FILE", "data/.token")
     if os.path.exists(token_file):
         with open(token_file, "r") as f:
             _api_token = f.read().strip()
