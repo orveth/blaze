@@ -18,9 +18,9 @@
         ps.pydantic
       ]);
 
-      # The blaze package
-      blazePackage = pkgs.stdenv.mkDerivation {
-        pname = "blaze";
+      # The blaze server package
+      blazeServer = pkgs.stdenv.mkDerivation {
+        pname = "blaze-server";
         version = "0.2.0";
 
         src = ./.;
@@ -57,27 +57,56 @@
         };
       };
 
+      # The blaze CLI package
+      blazeCli = pkgs.rustPlatform.buildRustPackage {
+        pname = "blaze-cli";
+        version = "0.1.0";
+
+        src = ./cli;
+
+        cargoLock = {
+          lockFile = ./cli/Cargo.lock;
+        };
+
+        nativeBuildInputs = [ pkgs.pkg-config ];
+        buildInputs = [ pkgs.openssl ];
+
+        meta = with pkgs.lib; {
+          description = "CLI for Blaze task board";
+          homepage = "https://github.com/orveth/blaze";
+          license = licenses.mit;
+          maintainers = [ ];
+          platforms = platforms.linux;
+        };
+      };
+
     in
     {
-      # Development shell (unchanged)
+      # Development shell
       devShells.${system}.default = pkgs.mkShell {
         buildInputs = [
           python
           python.pkgs.fastapi
           python.pkgs.uvicorn
           python.pkgs.pydantic
+          pkgs.cargo
+          pkgs.rustc
+          pkgs.pkg-config
+          pkgs.openssl
         ];
 
         shellHook = ''
-          echo "🗂️  Kanban dev shell"
-          echo "Run: uvicorn backend.main:app --reload"
+          echo "🗂️  Blaze dev shell"
+          echo "Server: uvicorn backend.main:app --reload"
+          echo "CLI: cd cli && cargo build"
         '';
       };
 
       # Packages
       packages.${system} = {
-        default = blazePackage;
-        blaze = blazePackage;
+        default = blazeServer;
+        server = blazeServer;
+        cli = blazeCli;
       };
 
       # NixOS module
@@ -90,11 +119,15 @@
       apps.${system} = {
         default = {
           type = "app";
-          program = "${blazePackage}/bin/blaze-server";
+          program = "${blazeServer}/bin/blaze-server";
         };
-        blaze = {
+        server = {
           type = "app";
-          program = "${blazePackage}/bin/blaze-server";
+          program = "${blazeServer}/bin/blaze-server";
+        };
+        cli = {
+          type = "app";
+          program = "${blazeCli}/bin/blaze";
         };
       };
     };
