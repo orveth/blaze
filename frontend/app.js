@@ -7,6 +7,7 @@ let authToken = localStorage.getItem('blaze_token') || '';
 let currentEditCard = null;
 let cardToDelete = null;
 let initialFormState = null;
+let boardSync = null;
 
 // DOM Elements
 const loginModal = document.getElementById('loginModal');
@@ -17,6 +18,74 @@ const loginForm = document.getElementById('loginForm');
 const cardForm = document.getElementById('cardForm');
 const board = document.getElementById('board');
 
+// WebSocket Real-time Updates
+class BoardSync {
+    constructor() {
+        this.ws = null;
+        this.reconnectDelay = 1000; // Start at 1s
+        this.maxDelay = 30000; // Cap at 30s
+        this.pingInterval = null;
+        this.connect();
+    }
+
+    connect() {
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const wsUrl = `${protocol}://${window.location.host}/ws`;
+        
+        console.log('[WS] Connecting to', wsUrl);
+        this.ws = new WebSocket(wsUrl);
+        
+        this.ws.onopen = () => {
+            console.log('[WS] Connected');
+            this.reconnectDelay = 1000; // Reset backoff
+            
+            // Send ping every 30s to keep connection alive
+            this.pingInterval = setInterval(() => {
+                if (this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send('ping');
+                }
+            }, 30000);
+        };
+        
+        this.ws.onmessage = (event) => {
+            if (event.data === 'pong') {
+                return; // Keepalive response
+            }
+            
+            try {
+                const msg = JSON.parse(event.data);
+                this.handleUpdate(msg);
+            } catch (e) {
+                console.error('[WS] Failed to parse message:', e);
+            }
+        };
+        
+        this.ws.onclose = () => {
+            console.log('[WS] Disconnected, reconnecting in', this.reconnectDelay, 'ms');
+            clearInterval(this.pingInterval);
+            setTimeout(() => this.connect(), this.reconnectDelay);
+            this.reconnectDelay = Math.min(this.reconnectDelay * 2, this.maxDelay);
+        };
+        
+        this.ws.onerror = (err) => {
+            console.error('[WS] Error:', err);
+            this.ws.close();
+        };
+    }
+
+    handleUpdate(msg) {
+        console.log('[WS] Received:', msg);
+        // Phase 2 will implement handlers for card_created, card_updated, etc.
+    }
+
+    disconnect() {
+        if (this.ws) {
+            clearInterval(this.pingInterval);
+            this.ws.close();
+        }
+    }
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     Filters.init();
@@ -25,6 +94,8 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoginModal();
     } else {
         loadBoard();
+        // Initialize WebSocket after auth
+        boardSync = new BoardSync();
     }
 
     setupEventListeners();
@@ -110,6 +181,8 @@ async function handleLogin(e) {
         localStorage.setItem('blaze_token', authToken);
         loginModal.close();
         loadBoard();
+        // Initialize WebSocket after successful login
+        boardSync = new BoardSync();
     } catch (error) {
         showToast(error.message, 'error');
     }
@@ -118,6 +191,11 @@ async function handleLogin(e) {
 function handleLogout() {
     authToken = '';
     localStorage.removeItem('blaze_token');
+    // Disconnect WebSocket on logout
+    if (boardSync) {
+        boardSync.disconnect();
+        boardSync = null;
+    }
     showLoginModal();
     clearBoard();
 }

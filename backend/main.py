@@ -5,7 +5,7 @@ import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -29,6 +29,46 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+
+# --- WebSocket Connection Manager ---
+
+
+class ConnectionManager:
+    """Manages active WebSocket connections and broadcasting."""
+
+    def __init__(self):
+        self.active_connections: set[WebSocket] = set()
+
+    async def connect(self, websocket: WebSocket):
+        """Accept and register a new WebSocket connection."""
+        await websocket.accept()
+        self.active_connections.add(websocket)
+        logger.info(f"WebSocket connected. Active: {len(self.active_connections)}")
+
+    def disconnect(self, websocket: WebSocket):
+        """Unregister a WebSocket connection."""
+        self.active_connections.discard(websocket)
+        logger.info(f"WebSocket disconnected. Active: {len(self.active_connections)}")
+
+    async def broadcast(self, message: dict):
+        """Broadcast a JSON message to all connected clients."""
+        if not self.active_connections:
+            return
+
+        dead = set()
+        for ws in self.active_connections:
+            try:
+                await ws.send_json(message)
+            except Exception as e:
+                logger.warning(f"Failed to send to WebSocket: {e}")
+                dead.add(ws)
+
+        # Clean up dead connections
+        self.active_connections -= dead
+
+
+manager = ConnectionManager()
 
 
 # Lifespan (replaces deprecated on_event)
@@ -243,6 +283,26 @@ async def get_board_stats(
     """Get board statistics."""
     storage = get_storage()
     return storage.get_stats()
+
+
+# --- WebSocket ---
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for real-time board updates."""
+    await manager.connect(websocket)
+    try:
+        # Keep connection alive and handle ping/pong
+        while True:
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+        manager.disconnect(websocket)
 
 
 # --- Static Files ---
