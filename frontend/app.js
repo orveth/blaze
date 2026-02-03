@@ -6,6 +6,7 @@ const API_BASE = '/api';
 let authToken = localStorage.getItem('blaze_token') || '';
 let currentEditCard = null;
 let cardToDelete = null;
+let initialFormState = null;
 
 // DOM Elements
 const loginModal = document.getElementById('loginModal');
@@ -41,7 +42,7 @@ function setupEventListeners() {
         cardToDelete = currentEditCard;
         confirmModal.showModal();
     });
-    document.getElementById('cancelCardBtn').addEventListener('click', () => cardModal.close());
+    document.getElementById('cancelCardBtn').addEventListener('click', () => closeCardModalWithConfirm());
 
     // Stats
     document.getElementById('statsBtn').addEventListener('click', openStatsModal);
@@ -50,8 +51,8 @@ function setupEventListeners() {
     document.getElementById('confirmCancel').addEventListener('click', () => confirmModal.close());
     document.getElementById('confirmDelete').addEventListener('click', handleDeleteCard);
 
-    // Close modals on backdrop click
-    [cardModal, statsModal, confirmModal].forEach(modal => {
+    // Close modals on backdrop click (not cardModal - prevent accidental data loss)
+    [statsModal, confirmModal].forEach(modal => {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.close();
         });
@@ -59,13 +60,23 @@ function setupEventListeners() {
 
     // Close buttons
     document.querySelectorAll('.close-btn').forEach(btn => {
-        btn.addEventListener('click', () => btn.closest('dialog').close());
+        btn.addEventListener('click', () => {
+            const dialog = btn.closest('dialog');
+            if (dialog === cardModal) {
+                closeCardModalWithConfirm();
+            } else {
+                dialog.close();
+            }
+        });
     });
 
     // Escape key to close modals
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            [cardModal, statsModal, confirmModal].forEach(modal => {
+            if (cardModal.open) {
+                closeCardModalWithConfirm();
+            }
+            [statsModal, confirmModal].forEach(modal => {
                 if (modal.open) modal.close();
             });
         }
@@ -548,6 +559,33 @@ function setupTouchDrag() {
 }
 
 // Card Modal
+function getFormState() {
+    return {
+        title: document.getElementById('cardTitle').value,
+        description: document.getElementById('cardDescription').value,
+        priority: document.getElementById('cardPriority').value,
+        column: document.getElementById('cardColumn').value,
+        dueDate: document.getElementById('cardDueDate').value,
+        tags: document.getElementById('cardTags').value
+    };
+}
+
+function isFormDirty() {
+    if (!initialFormState) return false;
+    const current = getFormState();
+    return Object.keys(initialFormState).some(key => initialFormState[key] !== current[key]);
+}
+
+function closeCardModalWithConfirm() {
+    if (isFormDirty()) {
+        if (confirm('You have unsaved changes. Discard them?')) {
+            cardModal.close();
+        }
+    } else {
+        cardModal.close();
+    }
+}
+
 function openCardModal(card = null) {
     currentEditCard = card;
     const title = document.getElementById('cardModalTitle');
@@ -579,6 +617,9 @@ function openCardModal(card = null) {
     }
 
     cardModal.showModal();
+    
+    // Capture initial state for dirty checking
+    initialFormState = getFormState();
 }
 
 async function handleSaveCard(e) {
