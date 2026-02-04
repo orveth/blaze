@@ -85,11 +85,176 @@ const BoardSync = (function() {
 
     /**
      * Handle board update from server
-     * Phase 2 will implement handlers for card_created, card_updated, etc.
      */
     function handleUpdate(msg) {
         console.log('[WS] Received:', msg);
-        // Phase 2 will implement handlers for card_created, card_updated, etc.
+        
+        switch (msg.type) {
+            case 'card_created':
+                handleCardCreated(msg.card);
+                break;
+            case 'card_updated':
+                handleCardUpdated(msg.card);
+                break;
+            case 'card_moved':
+                handleCardMoved(msg.card);
+                break;
+            case 'card_deleted':
+                handleCardDeleted(msg.card_id);
+                break;
+            case 'card_archived':
+                handleCardArchived(msg.card.id);
+                break;
+            case 'card_unarchived':
+                handleCardUnarchived(msg.card);
+                break;
+            case 'column_archived':
+                handleColumnArchived(msg.column);
+                break;
+            default:
+                console.warn('[WS] Unknown message type:', msg.type);
+        }
+    }
+
+    /**
+     * Handle card creation from WebSocket
+     */
+    function handleCardCreated(card) {
+        // Check if card already exists (might be our own mutation)
+        const existing = document.querySelector(`.card[data-id="${card.id}"]`);
+        if (existing) {
+            console.log('[WS] Card already exists:', card.id);
+            return;
+        }
+
+        // Create card element
+        const cardEl = window.createCardElement(card);
+        const container = document.querySelector(`.cards[data-column="${card.column}"]`);
+        
+        if (container) {
+            container.appendChild(cardEl);
+            window.updateCardCounts();
+            console.log('[WS] Added card:', card.id);
+        }
+    }
+
+    /**
+     * Handle card update from WebSocket
+     */
+    function handleCardUpdated(card) {
+        const existingCard = document.querySelector(`.card[data-id="${card.id}"]`);
+        if (!existingCard) {
+            console.log('[WS] Card not found for update:', card.id);
+            return;
+        }
+
+        // Replace the card element
+        const newCard = window.createCardElement(card);
+        existingCard.replaceWith(newCard);
+        console.log('[WS] Updated card:', card.id);
+    }
+
+    /**
+     * Handle card move from WebSocket
+     * 
+     * Key insight: When the local user drags a card, the drag-drop handler
+     * has a reference to the original DOM element. If we create a NEW element
+     * here, and then the drag handler appends the OLD element, we get duplicates.
+     * 
+     * Solution: Move the existing element instead of creating a new one.
+     */
+    function handleCardMoved(card) {
+        const existingCard = document.querySelector(`.card[data-id="${card.id}"]`);
+        const newContainer = document.querySelector(`.cards[data-column="${card.column}"]`);
+        
+        if (!newContainer) {
+            console.log('[WS] Target column not found:', card.column);
+            return;
+        }
+
+        if (!existingCard) {
+            // Card doesn't exist locally - must be from another client
+            const newCard = window.createCardElement(card);
+            newContainer.appendChild(newCard);
+            window.updateCardCounts();
+            console.log('[WS] Created card in column:', card.id, card.column);
+            return;
+        }
+
+        // Skip if card is already in the correct column
+        if (existingCard.closest('.cards') === newContainer) {
+            console.log('[WS] Card already in correct column:', card.id);
+            return;
+        }
+
+        // Move the EXISTING element (don't create new - prevents duplicates)
+        newContainer.appendChild(existingCard);
+        window.updateCardCounts();
+        console.log('[WS] Moved card:', card.id, 'to', card.column);
+    }
+
+    /**
+     * Handle card deletion from WebSocket
+     */
+    function handleCardDeleted(cardId) {
+        const card = document.querySelector(`.card[data-id="${cardId}"]`);
+        if (!card) {
+            console.log('[WS] Card not found for deletion:', cardId);
+            return;
+        }
+
+        card.remove();
+        window.updateCardCounts();
+        console.log('[WS] Deleted card:', cardId);
+    }
+
+    /**
+     * Handle card archiving from WebSocket
+     */
+    function handleCardArchived(cardId) {
+        const card = document.querySelector(`.card[data-id="${cardId}"]`);
+        if (!card) {
+            console.log('[WS] Card not found for archiving:', cardId);
+            return;
+        }
+
+        // Remove archived card from board (hidden by default)
+        card.remove();
+        window.updateCardCounts();
+        console.log('[WS] Archived card:', cardId);
+    }
+
+    /**
+     * Handle card unarchiving from WebSocket
+     */
+    function handleCardUnarchived(card) {
+        // Check if card already exists
+        const existing = document.querySelector(`.card[data-id="${card.id}"]`);
+        if (existing) {
+            console.log('[WS] Card already exists:', card.id);
+            return;
+        }
+
+        // Add card back to board
+        const cardEl = window.createCardElement(card);
+        const container = document.querySelector(`.cards[data-column="${card.column}"]`);
+        
+        if (container) {
+            container.appendChild(cardEl);
+            window.updateCardCounts();
+            console.log('[WS] Unarchived card:', card.id);
+        }
+    }
+
+    /**
+     * Handle column archiving from WebSocket
+     */
+    function handleColumnArchived(columnName) {
+        // Remove all cards from the archived column
+        const cards = document.querySelectorAll(`.cards[data-column="${columnName}"] .card`);
+        cards.forEach(card => card.remove());
+        window.updateCardCounts();
+        console.log('[WS] Archived column:', columnName);
     }
 
     /**

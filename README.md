@@ -120,6 +120,7 @@ blaze/
 - **5 columns:** Backlog → Todo → In Progress → Review → Done
 - **Priority levels:** Low (🟢) → Medium (🟡) → High (🟠) → Urgent (🔴)
 - **Due dates** with overdue indicators
+- **Archiving:** Hide cards without deleting them (archived cards retain their column and can be unarchived)
 - **Simple token auth** (printed on startup)
 - **JSON file persistence** with thread-safe locking
 - **Systemd hardening** (NixOS deployment)
@@ -135,11 +136,21 @@ All endpoints (except `/health` and auth) require `Authorization: Bearer <token>
 | POST | `/api/auth` | Login (returns token) |
 | GET | `/api/board` | Full board state |
 | GET | `/api/board/stats` | Statistics |
-| GET | `/api/cards` | List cards |
+| GET | `/api/cards` | List cards (archived cards excluded by default) |
 | POST | `/api/cards` | Create card |
 | PUT | `/api/cards/{id}` | Update card |
 | PATCH | `/api/cards/{id}/move` | Move to column |
+| PATCH | `/api/cards/{id}/archive` | Archive card (hides from UI, preserves column) |
+| PATCH | `/api/cards/{id}/unarchive` | Unarchive card |
+| POST | `/api/columns/{column}/archive` | Archive all cards in a column |
 | DELETE | `/api/cards/{id}` | Delete card |
+
+### Archiving Behavior
+
+- **Archived cards are hidden** from the UI by default
+- **Column is preserved** — if a card is in TODO when archived, it stays in TODO
+- **No automatic deletion** — archived cards remain in storage until explicitly deleted
+- Use `GET /api/cards?include_archived=true` to retrieve archived cards
 
 ## Roadmap
 

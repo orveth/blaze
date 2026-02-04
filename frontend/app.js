@@ -13,9 +13,14 @@ const loginModal = document.getElementById('loginModal');
 const cardModal = document.getElementById('cardModal');
 const statsModal = document.getElementById('statsModal');
 const confirmModal = document.getElementById('confirmModal');
+const confirmArchiveModal = document.getElementById('confirmArchiveModal');
 const loginForm = document.getElementById('loginForm');
 const cardForm = document.getElementById('cardForm');
 const board = document.getElementById('board');
+
+// Archive state
+let archiveMode = 'card'; // 'card' or 'column'
+let cardToArchive = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -55,8 +60,23 @@ function setupEventListeners() {
     document.getElementById('confirmCancel').addEventListener('click', () => confirmModal.close());
     document.getElementById('confirmDelete').addEventListener('click', handleDeleteCard);
 
+    // Archive
+    document.getElementById('archiveDoneBtn').addEventListener('click', () => {
+        archiveMode = 'column';
+        document.getElementById('archiveModalText').textContent = 'Archive all done cards?';
+        confirmArchiveModal.showModal();
+    });
+    document.getElementById('archiveCardBtn').addEventListener('click', () => {
+        archiveMode = 'card';
+        cardToArchive = currentEditCard;
+        document.getElementById('archiveModalText').textContent = 'Archive this card?';
+        confirmArchiveModal.showModal();
+    });
+    document.getElementById('archiveCancel').addEventListener('click', () => confirmArchiveModal.close());
+    document.getElementById('archiveConfirm').addEventListener('click', handleArchive);
+
     // Close modals on backdrop click (not cardModal - prevent accidental data loss)
-    [statsModal, confirmModal].forEach(modal => {
+    [statsModal, confirmModal, confirmArchiveModal].forEach(modal => {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.close();
         });
@@ -221,7 +241,10 @@ function updateCardCounts(counts) {
         const columnName = column.dataset.column;
         const countEl = column.querySelector('.card-count');
         if (countEl) {
-            const count = counts[columnName] || 0;
+            // If counts provided, use it; otherwise count cards in DOM
+            const count = counts 
+                ? (counts[columnName] || 0)
+                : column.querySelectorAll('.card').length;
             countEl.textContent = count > 0 ? `(${count})` : '';
         }
     });
@@ -332,39 +355,46 @@ function setupDragAndDrop() {
             // Skip if dropping in same column
             if (oldColumn === newColumn) return;
 
+            // --- Optimistic UI Update ---
+            // Move immediately, before API call
+            
+            // Remove empty state from target if present
+            const emptyState = container.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+
+            // Move the card element immediately
+            container.appendChild(card);
+
+            // Update counts immediately
+            updateCardCounts();
+
+            // Add empty state to old column if now empty
+            if (oldContainer && oldContainer.querySelectorAll('.card').length === 0) {
+                oldContainer.innerHTML = '<div class="empty-state">No cards yet</div>';
+            }
+
+            // --- API Call (background) ---
             try {
                 await apiCall(`/cards/${cardId}/move`, {
                     method: 'PATCH',
                     body: JSON.stringify({ column: newColumn })
                 });
-
-                // Remove empty state from target if present
-                const emptyState = container.querySelector('.empty-state');
-                if (emptyState) emptyState.remove();
-
-                // Move the card element
-                container.appendChild(card);
-
-                // Add empty state to old column if now empty
-                if (oldContainer && oldContainer.querySelectorAll('.card').length === 0) {
-                    oldContainer.innerHTML = '<div class="empty-state">No cards yet</div>';
-                }
-
-                // Update counts
-                const oldCount = oldContainer.closest('.column').querySelector('.card-count');
-                const newCount = container.closest('.column').querySelector('.card-count');
-                
-                if (oldCount) {
-                    const oldNum = parseInt(oldCount.textContent.replace(/[()]/g, '')) || 0;
-                    oldCount.textContent = oldNum - 1 > 0 ? `(${oldNum - 1})` : '';
-                }
-                if (newCount) {
-                    const newNum = parseInt(newCount.textContent.replace(/[()]/g, '')) || 0;
-                    newCount.textContent = `(${newNum + 1})`;
-                }
+                // Success - WS broadcast will arrive but card already in correct place
             } catch (error) {
+                // Revert on failure
                 showToast(`Failed to move: ${error.message}`, 'error');
-                loadBoard();
+                
+                // Move card back to old column
+                const emptyStateOld = oldContainer.querySelector('.empty-state');
+                if (emptyStateOld) emptyStateOld.remove();
+                oldContainer.appendChild(card);
+                
+                // Add empty state to new column if now empty
+                if (container.querySelectorAll('.card').length === 0) {
+                    container.innerHTML = '<div class="empty-state">No cards yet</div>';
+                }
+                
+                updateCardCounts();
             }
         });
     });
@@ -596,10 +626,12 @@ function openCardModal(card = null) {
     currentEditCard = card;
     const title = document.getElementById('cardModalTitle');
     const deleteBtn = document.getElementById('deleteCardBtn');
+    const archiveBtn = document.getElementById('archiveCardBtn');
 
     if (card) {
         title.textContent = 'Edit Card';
         deleteBtn.style.display = 'block';
+        archiveBtn.style.display = 'block';
 
         document.getElementById('cardId').value = card.id;
         document.getElementById('cardTitle').value = card.title;
@@ -618,6 +650,7 @@ function openCardModal(card = null) {
     } else {
         title.textContent = 'New Card';
         deleteBtn.style.display = 'none';
+        archiveBtn.style.display = 'none';
         cardForm.reset();
         document.getElementById('cardId').value = '';
     }
@@ -681,6 +714,33 @@ async function handleDeleteCard() {
     }
 
     cardToDelete = null;
+}
+
+// Archive
+async function handleArchive() {
+    try {
+        if (archiveMode === 'card' && cardToArchive) {
+            // Archive single card
+            await apiCall(`/cards/${cardToArchive.id}/archive`, {
+                method: 'PATCH'
+            });
+            confirmArchiveModal.close();
+            cardModal.close();
+            loadBoard();
+        } else if (archiveMode === 'column') {
+            // Archive all cards in Done column
+            await apiCall('/columns/done/archive', {
+                method: 'POST'
+            });
+            confirmArchiveModal.close();
+            loadBoard();
+            showToast('Done cards archived');
+        }
+    } catch (error) {
+        showToast(`Failed to archive: ${error.message}`, 'error');
+    }
+
+    cardToArchive = null;
 }
 
 // Stats Modal
@@ -776,3 +836,7 @@ function showToast(message, type = 'info') {
         setTimeout(() => toast.remove(), 200);
     }, 2500);
 }
+
+// Export functions for WebSocket sync module
+window.createCardElement = createCardElement;
+window.updateCardCounts = updateCardCounts;

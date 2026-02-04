@@ -146,11 +146,12 @@ async def login(request: LoginRequest):
 @app.get("/api/cards", response_model=list[Card])
 async def list_cards(
     column: Column | None = None,
+    include_archived: bool = False,
     _: str = Depends(verify_token),
 ):
     """List all cards, optionally filtered by column."""
     storage = get_storage()
-    return storage.list_cards(column=column)
+    return storage.list_cards(column=column, include_archived=include_archived)
 
 
 @app.get("/api/cards/{card_id}", response_model=Card)
@@ -185,6 +186,13 @@ async def create_card(
         tags=card_data.tags,
     )
     logger.info(f"Created card: {card.id} - {card.title}")
+    
+    # Broadcast to connected clients
+    await manager.broadcast({
+        "type": "card_created",
+        "card": card.model_dump(mode='json')
+    })
+    
     return card
 
 
@@ -219,6 +227,13 @@ async def update_card(
             detail=f"Card {card_id} not found",
         )
     logger.info(f"Updated card: {card_id}")
+    
+    # Broadcast to connected clients
+    await manager.broadcast({
+        "type": "card_updated",
+        "card": card.model_dump(mode='json')
+    })
+    
     return card
 
 
@@ -237,6 +252,13 @@ async def move_card(
             detail=f"Card {card_id} not found",
         )
     logger.info(f"Moved card {card_id} to {move_data.column.value}")
+    
+    # Broadcast to connected clients
+    await manager.broadcast({
+        "type": "card_moved",
+        "card": card.model_dump(mode='json')
+    })
+    
     return card
 
 
@@ -253,7 +275,82 @@ async def delete_card(
             detail=f"Card {card_id} not found",
         )
     logger.info(f"Deleted card: {card_id}")
+    
+    # Broadcast to connected clients
+    await manager.broadcast({
+        "type": "card_deleted",
+        "card_id": card_id
+    })
+    
     return None
+
+
+@app.patch("/api/cards/{card_id}/archive", response_model=Card)
+async def archive_card(
+    card_id: str,
+    _: str = Depends(verify_token),
+):
+    """Archive a card."""
+    storage = get_storage()
+    card = storage.archive_card(card_id)
+    if not card:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Card {card_id} not found",
+        )
+    logger.info(f"Archived card: {card_id}")
+    
+    # Broadcast to connected clients
+    await manager.broadcast({
+        "type": "card_archived",
+        "card": card.model_dump(mode='json')
+    })
+    
+    return card
+
+
+@app.patch("/api/cards/{card_id}/unarchive", response_model=Card)
+async def unarchive_card(
+    card_id: str,
+    _: str = Depends(verify_token),
+):
+    """Unarchive a card."""
+    storage = get_storage()
+    card = storage.unarchive_card(card_id)
+    if not card:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Card {card_id} not found",
+        )
+    logger.info(f"Unarchived card: {card_id}")
+    
+    # Broadcast to connected clients
+    await manager.broadcast({
+        "type": "card_unarchived",
+        "card": card.model_dump(mode='json')
+    })
+    
+    return card
+
+
+@app.post("/api/columns/{column}/archive")
+async def archive_column(
+    column: Column,
+    _: str = Depends(verify_token),
+):
+    """Archive all cards in a column."""
+    storage = get_storage()
+    count = storage.archive_column(column)
+    logger.info(f"Archived {count} cards from {column.value}")
+    
+    # Broadcast to connected clients
+    await manager.broadcast({
+        "type": "column_archived",
+        "column": column.value,
+        "count": count
+    })
+    
+    return {"archived_count": count}
 
 
 # --- Board Endpoints ---
