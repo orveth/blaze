@@ -159,9 +159,42 @@ impl Client {
         self.get(&path).await
     }
 
-    /// Get a single card
+    /// Resolve a potentially short card ID to a full ID.
+    /// Supports prefix matching if the given ID is shorter than the full length.
+    async fn resolve_card_id(&self, short_id: &str) -> Result<String> {
+        // If it looks like a full ID (12 chars), use it directly
+        if short_id.len() >= 12 {
+            return Ok(short_id.to_string());
+        }
+
+        // Otherwise, fetch all cards and find matches
+        let cards = self.list_cards(None).await?;
+        let matches: Vec<&Card> = cards
+            .iter()
+            .filter(|card| card.id.starts_with(short_id))
+            .collect();
+
+        match matches.len() {
+            0 => Err(BlazeError::Api {
+                status: 404,
+                message: format!("No card found matching ID prefix '{}'", short_id),
+            }),
+            1 => Ok(matches[0].id.clone()),
+            _ => Err(BlazeError::Api {
+                status: 400,
+                message: format!(
+                    "Ambiguous ID prefix '{}': matches {} cards. Use a longer prefix.",
+                    short_id,
+                    matches.len()
+                ),
+            }),
+        }
+    }
+
+    /// Get a single card (supports short ID prefix matching)
     pub async fn get_card(&self, id: &str) -> Result<Card> {
-        self.get(&format!("/api/cards/{}", id)).await
+        let full_id = self.resolve_card_id(id).await?;
+        self.get(&format!("/api/cards/{}", full_id)).await
     }
 
     /// Create a new card
@@ -170,22 +203,25 @@ impl Client {
         self.post("/api/cards", card).await
     }
 
-    /// Update a card
+    /// Update a card (supports short ID prefix matching)
     #[allow(dead_code)]
     pub async fn update_card(&self, id: &str, update: &CardUpdate) -> Result<Card> {
-        self.put(&format!("/api/cards/{}", id), update).await
+        let full_id = self.resolve_card_id(id).await?;
+        self.put(&format!("/api/cards/{}", full_id), update).await
     }
 
-    /// Move a card to a different column
+    /// Move a card to a different column (supports short ID prefix matching)
     #[allow(dead_code)]
     pub async fn move_card(&self, id: &str, column: Column) -> Result<Card> {
-        self.patch(&format!("/api/cards/{}/move", id), &CardMove { column }).await
+        let full_id = self.resolve_card_id(id).await?;
+        self.patch(&format!("/api/cards/{}/move", full_id), &CardMove { column }).await
     }
 
-    /// Delete a card
+    /// Delete a card (supports short ID prefix matching)
     #[allow(dead_code)]
     pub async fn delete_card(&self, id: &str) -> Result<()> {
-        self.delete(&format!("/api/cards/{}", id)).await
+        let full_id = self.resolve_card_id(id).await?;
+        self.delete(&format!("/api/cards/{}", full_id)).await
     }
 
     /// Get board statistics
