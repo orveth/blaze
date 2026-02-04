@@ -154,13 +154,15 @@ main {
     min-height: 0;
 }
 
-/* Board: flexbox with horizontal scroll, fixed-width columns */
+/* Board: responsive flexbox layout */
 .board {
     display: flex;
-    gap: 1px;
+    justify-content: center;
+    gap: 1rem;
     flex: 1;
     min-height: 0;
-    background: var(--border);
+    padding: 0 1.5rem;
+    background: var(--bg);
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: thin;
@@ -180,12 +182,12 @@ main {
     background: var(--text-3);
 }
 
-/* Mobile: narrower columns with padding */
+/* Mobile: card-style columns */
 @media (max-width: 680px) {
     .board {
+        justify-content: flex-start;
         gap: 0.5rem;
         padding: 0.5rem;
-        background: var(--bg);
         -webkit-overflow-scrolling: touch;
     }
     
@@ -210,12 +212,13 @@ main {
 
 /* Columns */
 .column {
-    background: var(--bg);
+    background: var(--bg-raised);
+    border-radius: var(--radius-lg);
     display: flex;
     flex-direction: column;
-    min-width: 280px;
-    width: 280px;
-    flex-shrink: 0;
+    flex: 1 0 260px;
+    min-width: 260px;
+    max-width: 360px;
     max-height: 100%;
 }
 
