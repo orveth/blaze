@@ -62,6 +62,7 @@ class Storage:
             "created_at": card.created_at.isoformat(),
             "updated_at": card.updated_at.isoformat(),
             "position": card.position,
+            "archived": card.archived,
         }
 
     def _dict_to_card(self, data: dict) -> Card:
@@ -77,12 +78,22 @@ class Storage:
             created_at=datetime.fromisoformat(data["created_at"]),
             updated_at=datetime.fromisoformat(data["updated_at"]),
             position=data.get("position", 0),
+            archived=data.get("archived", False),
         )
 
-    def list_cards(self, column: Optional[Column] = None) -> list[Card]:
-        """List all cards, optionally filtered by column."""
+    def list_cards(self, column: Optional[Column] = None, include_archived: bool = False) -> list[Card]:
+        """List all cards, optionally filtered by column.
+        
+        Args:
+            column: Filter by column (optional)
+            include_archived: Include archived cards (default: False)
+        """
         data = self._read_data()
         cards = [self._dict_to_card(c) for c in data["cards"].values()]
+        
+        # Filter out archived cards unless explicitly requested
+        if not include_archived:
+            cards = [c for c in cards if not c.archived]
         
         if column:
             cards = [c for c in cards if c.column == column]
@@ -174,6 +185,28 @@ class Storage:
     def move_card(self, card_id: str, column: Column) -> Optional[Card]:
         """Move a card to a different column."""
         return self.update_card(card_id, column=column)
+
+    def archive_card(self, card_id: str) -> Optional[Card]:
+        """Archive a card."""
+        return self.update_card(card_id, archived=True)
+
+    def unarchive_card(self, card_id: str) -> Optional[Card]:
+        """Unarchive a card."""
+        return self.update_card(card_id, archived=False)
+
+    def archive_column(self, column: Column) -> int:
+        """Archive all cards in a column. Returns count of archived cards."""
+        data = self._read_data()
+        count = 0
+        
+        for card_id, card_data in data["cards"].items():
+            if card_data["column"] == column.value and not card_data.get("archived", False):
+                card_data["archived"] = True
+                card_data["updated_at"] = now_utc().isoformat()
+                count += 1
+        
+        self._write_data(data)
+        return count
 
     def delete_card(self, card_id: str) -> bool:
         """Delete a card."""

@@ -60,6 +60,7 @@ class Card(CardBase):
     created_at: datetime
     updated_at: datetime
     position: int = 0
+    archived: bool = False
 
     class Config:
         from_attributes = True
