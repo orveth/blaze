@@ -2,10 +2,10 @@
 
 use crate::client::Client;
 use crate::error::Result;
-use crate::output::{print_board_summary, OutputFormat};
+use crate::output::print_board_summary;
 
-pub async fn run(client: &Client, format: OutputFormat) -> Result<()> {
+pub async fn run(client: &Client) -> Result<()> {
     let cards = client.list_cards(None).await?;
-    print_board_summary(&cards, format);
+    print_board_summary(&cards);
     Ok(())
 }

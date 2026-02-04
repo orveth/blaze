@@ -2,10 +2,10 @@
 
 use crate::client::Client;
 use crate::error::Result;
-use crate::output::{print_stats, OutputFormat};
+use crate::output::print_stats;
 
-pub async fn run(client: &Client, format: OutputFormat) -> Result<()> {
+pub async fn run(client: &Client) -> Result<()> {
     let stats = client.stats().await?;
-    print_stats(&stats, format);
+    print_stats(&stats);
     Ok(())
 }

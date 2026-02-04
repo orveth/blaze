@@ -1,8 +1,8 @@
 [package]
 name = "blaze"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
-description = "CLI for Blaze task board"
+description = "CLI for Blaze task board (JSON output)"
 authors = ["Orveth"]
 license = "MIT"
 repository = "https://github.com/orveth/blaze"
@@ -17,8 +17,6 @@ thiserror = "2"
 dirs = "6"
 toml = "0.8"
 chrono = { version = "0.4", features = ["serde"] }
-colored = "3"
-tabled = "0.18"
 
 [profile.release]
 lto = true
