@@ -2,13 +2,14 @@
 
 import logging
 import secrets
+import hashlib
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 
 from .auth import verify_token, get_api_token
@@ -407,15 +408,59 @@ async def websocket_endpoint(websocket: WebSocket):
 frontend_path = Path(__file__).parent.parent / "frontend"
 
 
+def get_file_hash(filepath: Path) -> str:
+    """Get a short hash of file contents for cache busting."""
+    if filepath.exists():
+        content = filepath.read_bytes()
+        return hashlib.md5(content).hexdigest()[:8]
+    return "0"
+
+
+def get_versioned_html() -> str:
+    """Read index.html and inject version hashes into static file URLs."""
+    index_path = frontend_path / "index.html"
+    if not index_path.exists():
+        return ""
+    
+    html = index_path.read_text()
+    
+    # Get hashes for each static file
+    static_files = ["style.css", "filters.js", "sync.js", "app.js"]
+    for filename in static_files:
+        file_hash = get_file_hash(frontend_path / filename)
+        # Replace href="/static/file.ext" with href="/static/file.ext?v=hash"
+        html = html.replace(
+            f'"/static/{filename}"',
+            f'"/static/{filename}?v={file_hash}"'
+        )
+    
+    return html
+
+
 @app.get("/")
 async def serve_index():
-    """Serve the frontend index.html."""
-    index_path = frontend_path / "index.html"
-    if index_path.exists():
-        return FileResponse(index_path)
+    """Serve the frontend index.html with cache-busted static URLs."""
+    html = get_versioned_html()
+    
+    if html:
+        return HTMLResponse(
+            content=html,
+            headers={"Cache-Control": "no-cache, must-revalidate"}
+        )
     return {"message": "Frontend not found. API is running at /api/"}
+
+
+# Custom static files handler with cache headers
+class CachedStaticFiles(StaticFiles):
+    """StaticFiles with aggressive caching (files are cache-busted via query params)."""
+    
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        # Long cache since URLs are versioned with content hash
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
 
 
 # Mount static files for CSS/JS
 if frontend_path.exists():
-    app.mount("/static", StaticFiles(directory=frontend_path), name="static")
+    app.mount("/static", CachedStaticFiles(directory=frontend_path), name="static")
