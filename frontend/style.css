@@ -406,7 +406,7 @@ dialog::backdrop {
 
 /* Mobile: full-screen modals for complex forms */
 @media (max-width: 600px) {
-    dialog:not(#loginModal):not(#confirmModal) {
+    dialog:not(#loginModal):not(#confirmModal):not(#confirmArchiveModal) {
         width: 100%;
         height: 100%;
         max-height: 100%;
@@ -417,11 +417,11 @@ dialog::backdrop {
         transform: none;
     }
     
-    dialog:not(#loginModal):not(#confirmModal)[open] {
+    dialog:not(#loginModal):not(#confirmModal):not(#confirmArchiveModal)[open] {
         transform: none;
     }
     
-    dialog:not(#loginModal):not(#confirmModal) .modal-content {
+    dialog:not(#loginModal):not(#confirmModal):not(#confirmArchiveModal) .modal-content {
         min-height: 100%;
         max-height: 100%;
         display: flex;
@@ -429,20 +429,21 @@ dialog::backdrop {
         padding-top: env(safe-area-inset-top, 1.25rem);
     }
     
-    dialog:not(#loginModal):not(#confirmModal) form {
+    dialog:not(#loginModal):not(#confirmModal):not(#confirmArchiveModal) form {
         flex: 1;
         display: flex;
         flex-direction: column;
     }
     
-    dialog:not(#loginModal):not(#confirmModal) .modal-footer {
+    dialog:not(#loginModal):not(#confirmModal):not(#confirmArchiveModal) .modal-footer {
         margin-top: auto;
         padding-bottom: env(safe-area-inset-bottom, 0.5rem);
     }
     
     /* Small modals stay centered but with better sizing */
     #loginModal,
-    #confirmModal {
+    #confirmModal,
+    #confirmArchiveModal {
         width: calc(100vw - 2rem);
     }
 }
