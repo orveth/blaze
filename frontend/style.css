@@ -206,6 +206,28 @@ main {
     font-weight: 500;
 }
 
+.archive-column-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-3);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+
+.archive-column-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-2);
+}
+
+.archive-column-btn:active {
+    transform: scale(0.95);
+}
+
 .cards {
     flex: 1;
     overflow-y: auto;

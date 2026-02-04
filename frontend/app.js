@@ -13,9 +13,14 @@ const loginModal = document.getElementById('loginModal');
 const cardModal = document.getElementById('cardModal');
 const statsModal = document.getElementById('statsModal');
 const confirmModal = document.getElementById('confirmModal');
+const confirmArchiveModal = document.getElementById('confirmArchiveModal');
 const loginForm = document.getElementById('loginForm');
 const cardForm = document.getElementById('cardForm');
 const board = document.getElementById('board');
+
+// Archive state
+let archiveMode = 'card'; // 'card' or 'column'
+let cardToArchive = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -55,8 +60,23 @@ function setupEventListeners() {
     document.getElementById('confirmCancel').addEventListener('click', () => confirmModal.close());
     document.getElementById('confirmDelete').addEventListener('click', handleDeleteCard);
 
+    // Archive
+    document.getElementById('archiveDoneBtn').addEventListener('click', () => {
+        archiveMode = 'column';
+        document.getElementById('archiveModalText').textContent = 'Archive all done cards?';
+        confirmArchiveModal.showModal();
+    });
+    document.getElementById('archiveCardBtn').addEventListener('click', () => {
+        archiveMode = 'card';
+        cardToArchive = currentEditCard;
+        document.getElementById('archiveModalText').textContent = 'Archive this card?';
+        confirmArchiveModal.showModal();
+    });
+    document.getElementById('archiveCancel').addEventListener('click', () => confirmArchiveModal.close());
+    document.getElementById('archiveConfirm').addEventListener('click', handleArchive);
+
     // Close modals on backdrop click (not cardModal - prevent accidental data loss)
-    [statsModal, confirmModal].forEach(modal => {
+    [statsModal, confirmModal, confirmArchiveModal].forEach(modal => {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.close();
         });
@@ -606,10 +626,12 @@ function openCardModal(card = null) {
     currentEditCard = card;
     const title = document.getElementById('cardModalTitle');
     const deleteBtn = document.getElementById('deleteCardBtn');
+    const archiveBtn = document.getElementById('archiveCardBtn');
 
     if (card) {
         title.textContent = 'Edit Card';
         deleteBtn.style.display = 'block';
+        archiveBtn.style.display = 'block';
 
         document.getElementById('cardId').value = card.id;
         document.getElementById('cardTitle').value = card.title;
@@ -628,6 +650,7 @@ function openCardModal(card = null) {
     } else {
         title.textContent = 'New Card';
         deleteBtn.style.display = 'none';
+        archiveBtn.style.display = 'none';
         cardForm.reset();
         document.getElementById('cardId').value = '';
     }
@@ -691,6 +714,33 @@ async function handleDeleteCard() {
     }
 
     cardToDelete = null;
+}
+
+// Archive
+async function handleArchive() {
+    try {
+        if (archiveMode === 'card' && cardToArchive) {
+            // Archive single card
+            await apiCall(`/cards/${cardToArchive.id}/archive`, {
+                method: 'PATCH'
+            });
+            confirmArchiveModal.close();
+            cardModal.close();
+            loadBoard();
+        } else if (archiveMode === 'column') {
+            // Archive all cards in Done column
+            await apiCall('/columns/done/archive', {
+                method: 'POST'
+            });
+            confirmArchiveModal.close();
+            loadBoard();
+            showToast('Done cards archived');
+        }
+    } catch (error) {
+        showToast(`Failed to archive: ${error.message}`, 'error');
+    }
+
+    cardToArchive = null;
 }
 
 // Stats Modal

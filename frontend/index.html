@@ -89,6 +89,11 @@
                 <header class="column-header">
                     <h2>Done</h2>
                     <span class="card-count"></span>
+                    <button class="archive-column-btn" id="archiveDoneBtn" title="Archive all done cards">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
                 </header>
                 <div class="cards" data-column="done"></div>
             </section>
@@ -158,6 +163,7 @@
                 </div>
                 
                 <footer class="modal-footer">
+                    <button type="button" class="btn-ghost" id="archiveCardBtn" style="display: none;">Archive</button>
                     <button type="button" class="btn-ghost" id="deleteCardBtn" style="display: none;">Delete</button>
                     <div class="spacer"></div>
                     <button type="button" class="btn-ghost" id="cancelCardBtn">Cancel</button>
@@ -187,6 +193,17 @@
             <footer class="modal-footer">
                 <button class="btn-ghost" id="confirmCancel">Cancel</button>
                 <button class="btn-danger" id="confirmDelete">Delete</button>
+            </footer>
+        </div>
+    </dialog>
+
+    <!-- Confirm Archive Modal -->
+    <dialog id="confirmArchiveModal">
+        <div class="modal-content modal-sm">
+            <p id="archiveModalText">Archive all done cards?</p>
+            <footer class="modal-footer">
+                <button class="btn-ghost" id="archiveCancel">Cancel</button>
+                <button class="btn-primary" id="archiveConfirm">Archive</button>
             </footer>
         </div>
     </dialog>

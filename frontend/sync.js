@@ -102,6 +102,15 @@ const BoardSync = (function() {
             case 'card_deleted':
                 handleCardDeleted(msg.card_id);
                 break;
+            case 'card_archived':
+                handleCardArchived(msg.card.id);
+                break;
+            case 'card_unarchived':
+                handleCardUnarchived(msg.card);
+                break;
+            case 'column_archived':
+                handleColumnArchived(msg.column);
+                break;
             default:
                 console.warn('[WS] Unknown message type:', msg.type);
         }
@@ -197,6 +206,55 @@ const BoardSync = (function() {
         card.remove();
         window.updateCardCounts();
         console.log('[WS] Deleted card:', cardId);
+    }
+
+    /**
+     * Handle card archiving from WebSocket
+     */
+    function handleCardArchived(cardId) {
+        const card = document.querySelector(`.card[data-id="${cardId}"]`);
+        if (!card) {
+            console.log('[WS] Card not found for archiving:', cardId);
+            return;
+        }
+
+        // Remove archived card from board (hidden by default)
+        card.remove();
+        window.updateCardCounts();
+        console.log('[WS] Archived card:', cardId);
+    }
+
+    /**
+     * Handle card unarchiving from WebSocket
+     */
+    function handleCardUnarchived(card) {
+        // Check if card already exists
+        const existing = document.querySelector(`.card[data-id="${card.id}"]`);
+        if (existing) {
+            console.log('[WS] Card already exists:', card.id);
+            return;
+        }
+
+        // Add card back to board
+        const cardEl = window.createCardElement(card);
+        const container = document.querySelector(`.cards[data-column="${card.column}"]`);
+        
+        if (container) {
+            container.appendChild(cardEl);
+            window.updateCardCounts();
+            console.log('[WS] Unarchived card:', card.id);
+        }
+    }
+
+    /**
+     * Handle column archiving from WebSocket
+     */
+    function handleColumnArchived(columnName) {
+        // Remove all cards from the archived column
+        const cards = document.querySelectorAll(`.cards[data-column="${columnName}"] .card`);
+        cards.forEach(card => card.remove());
+        window.updateCardCounts();
+        console.log('[WS] Archived column:', columnName);
     }
 
     /**
