@@ -529,6 +529,34 @@ dialog::backdrop {
     color: var(--text);
 }
 
+/* Card timestamps */
+.card-timestamps {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-subtle, var(--border));
+    display: flex;
+    gap: 1.5rem;
+}
+
+.timestamp-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.timestamp-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.timestamp-item span:last-child {
+    font-size: 13px;
+    color: var(--text-2);
+}
+
 .modal-footer {
     display: flex;
     align-items: center;

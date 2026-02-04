@@ -22,6 +22,32 @@ const board = document.getElementById('board');
 let archiveMode = 'card'; // 'card' or 'column'
 let cardToArchive = null;
 
+// Utility Functions
+function formatTimestamp(isoString) {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    // If today, show relative time
+    if (diffDays === 0) {
+        if (diffMins < 1) return 'just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+    }
+
+    // Otherwise show date
+    const options = { 
+        month: 'short', 
+        day: 'numeric',
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    };
+    return date.toLocaleDateString('en-US', options);
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     Filters.init();
@@ -627,6 +653,9 @@ function openCardModal(card = null) {
     const title = document.getElementById('cardModalTitle');
     const deleteBtn = document.getElementById('deleteCardBtn');
     const archiveBtn = document.getElementById('archiveCardBtn');
+    const timestamps = document.getElementById('cardTimestamps');
+    const createdAt = document.getElementById('cardCreatedAt');
+    const updatedAt = document.getElementById('cardUpdatedAt');
 
     if (card) {
         title.textContent = 'Edit Card';
@@ -647,10 +676,20 @@ function openCardModal(card = null) {
         }
 
         document.getElementById('cardTags').value = (card.tags || []).join(', ');
+
+        // Show timestamps for existing cards
+        if (card.created_at) {
+            createdAt.textContent = formatTimestamp(card.created_at);
+        }
+        if (card.updated_at) {
+            updatedAt.textContent = formatTimestamp(card.updated_at);
+        }
+        timestamps.style.display = 'block';
     } else {
         title.textContent = 'New Card';
         deleteBtn.style.display = 'none';
         archiveBtn.style.display = 'none';
+        timestamps.style.display = 'none';
         cardForm.reset();
         document.getElementById('cardId').value = '';
     }
