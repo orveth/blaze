@@ -24,6 +24,9 @@ from .models import (
     PlanCreate,
     PlanUpdate,
     PlanStatus,
+    PlanFile,
+    PlanFileCreate,
+    PlanFileUpdate,
 )
 from .storage import get_storage
 
@@ -368,9 +371,10 @@ async def create_plan(
 ):
     """Create a new plan."""
     storage = get_storage()
+    files = [{"name": f.name, "content": f.content} for f in plan_data.files] if plan_data.files else None
     plan = storage.create_plan(
         title=plan_data.title,
-        description=plan_data.description,
+        files=files,
     )
     logger.info(f"Created plan: {plan.id} - {plan.title}")
     return plan
@@ -420,13 +424,12 @@ async def update_plan(
     plan_data: PlanUpdate,
     _: str = Depends(verify_token),
 ):
-    """Update a plan's fields."""
+    """Update a plan's title or status."""
     storage = get_storage()
     
     plan = storage.update_plan(
         plan_id,
         title=plan_data.title,
-        description=plan_data.description,
         status=plan_data.status,
     )
     if not plan:
@@ -452,6 +455,122 @@ async def delete_plan(
         )
     logger.info(f"Deleted plan: {plan_id}")
     return None
+
+
+# --- Plan File Endpoints ---
+
+
+@app.post("/api/plans/{plan_id}/files", response_model=Plan, status_code=status.HTTP_201_CREATED)
+async def add_plan_file(
+    plan_id: str,
+    file_data: PlanFileCreate,
+    _: str = Depends(verify_token),
+):
+    """Add a file to a plan."""
+    storage = get_storage()
+    
+    # Check plan exists first
+    plan = storage.get_plan(plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {plan_id} not found",
+        )
+    
+    result = storage.add_plan_file(plan_id, name=file_data.name, content=file_data.content)
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"File '{file_data.name}' already exists in plan",
+        )
+    logger.info(f"Added file '{file_data.name}' to plan {plan_id}")
+    return result
+
+
+@app.get("/api/plans/{plan_id}/files/{filename}", response_model=PlanFile)
+async def get_plan_file(
+    plan_id: str,
+    filename: str,
+    _: str = Depends(verify_token),
+):
+    """Get a specific file from a plan."""
+    storage = get_storage()
+    
+    # Check plan exists first
+    plan = storage.get_plan(plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {plan_id} not found",
+        )
+    
+    file = storage.get_plan_file(plan_id, filename)
+    if not file:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"File '{filename}' not found in plan",
+        )
+    return file
+
+
+@app.patch("/api/plans/{plan_id}/files/{filename}", response_model=Plan)
+async def update_plan_file(
+    plan_id: str,
+    filename: str,
+    file_data: PlanFileUpdate,
+    _: str = Depends(verify_token),
+):
+    """Update a file within a plan."""
+    storage = get_storage()
+    
+    # Check plan exists first
+    plan = storage.get_plan(plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {plan_id} not found",
+        )
+    
+    result = storage.update_plan_file(
+        plan_id,
+        filename,
+        name=file_data.name,
+        content=file_data.content,
+    )
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"File '{filename}' not found in plan",
+        )
+    logger.info(f"Updated file '{filename}' in plan {plan_id}")
+    return result
+
+
+@app.delete("/api/plans/{plan_id}/files/{filename}", response_model=Plan)
+async def delete_plan_file(
+    plan_id: str,
+    filename: str,
+    _: str = Depends(verify_token),
+):
+    """Delete a file from a plan."""
+    storage = get_storage()
+    
+    # Check plan exists first
+    plan = storage.get_plan(plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {plan_id} not found",
+        )
+    
+    result = storage.delete_plan_file(plan_id, filename)
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"File '{filename}' not found in plan",
+        )
+    logger.info(f"Deleted file '{filename}' from plan {plan_id}")
+    return result
 
 
 # --- Board Endpoints ---
