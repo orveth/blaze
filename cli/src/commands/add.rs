@@ -2,7 +2,7 @@
 
 use crate::client::Client;
 use crate::error::Result;
-use crate::output::{print_card_detail, OutputFormat};
+use crate::output::print_card_detail;
 use crate::types::{CardCreate, Column, Priority};
 use chrono::{NaiveDate, TimeZone, Utc};
 
@@ -15,7 +15,7 @@ pub struct AddOptions {
     pub due: Option<String>,
 }
 
-pub async fn run(client: &Client, options: AddOptions, format: OutputFormat) -> Result<()> {
+pub async fn run(client: &Client, options: AddOptions) -> Result<()> {
     // Parse due date if provided
     let due_date = match options.due {
         Some(ref s) => {
@@ -39,6 +39,6 @@ pub async fn run(client: &Client, options: AddOptions, format: OutputFormat) -> 
     };
 
     let created = client.create_card(&card).await?;
-    print_card_detail(&created, format);
+    print_card_detail(&created);
     Ok(())
 }

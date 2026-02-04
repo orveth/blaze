@@ -1,4 +1,6 @@
 //! Blaze CLI - Command-line interface for the Blaze task board.
+//! 
+//! All output is JSON for machine parsing and full ID visibility.
 
 mod client;
 mod commands;
@@ -13,7 +15,7 @@ use types::{Column, Priority};
 
 #[derive(Parser)]
 #[command(name = "blaze")]
-#[command(about = "CLI for Blaze task board", long_about = None)]
+#[command(about = "CLI for Blaze task board (JSON output)", long_about = None)]
 #[command(version)]
 struct Cli {
     /// API base URL
@@ -23,10 +25,6 @@ struct Cli {
     /// API token
     #[arg(long, global = true, env = "BLAZE_TOKEN")]
     token: Option<String>,
-
-    /// Output format
-    #[arg(short, long, global = true, default_value = "table")]
-    output: output::OutputFormat,
 
     #[command(subcommand)]
     command: Commands,
@@ -193,22 +191,22 @@ async fn run() -> error::Result<()> {
                 tags: tag,
                 overdue,
             };
-            list::run(&client, filters, cli.output).await
+            list::run(&client, filters).await
         }
 
         Commands::Show { card_id } => {
             let client = client::Client::new(&url, token)?;
-            show::run(&client, &card_id, cli.output).await
+            show::run(&client, &card_id).await
         }
 
         Commands::Board => {
             let client = client::Client::new(&url, token)?;
-            board::run(&client, cli.output).await
+            board::run(&client).await
         }
 
         Commands::Stats => {
             let client = client::Client::new(&url, token)?;
-            stats::run(&client, cli.output).await
+            stats::run(&client).await
         }
 
         Commands::Add {
@@ -228,7 +226,7 @@ async fn run() -> error::Result<()> {
                 tags: tag,
                 due,
             };
-            add::run(&client, options, cli.output).await
+            add::run(&client, options).await
         }
 
         Commands::Edit {
@@ -254,17 +252,17 @@ async fn run() -> error::Result<()> {
                 due,
                 clear_due,
             };
-            edit::run(&client, options, cli.output).await
+            edit::run(&client, options).await
         }
 
         Commands::Move { card_id, column } => {
             let client = client::Client::new(&url, token)?;
-            move_card::run(&client, &card_id, column, cli.output).await
+            move_card::run(&client, &card_id, column).await
         }
 
         Commands::Done { card_id } => {
             let client = client::Client::new(&url, token)?;
-            move_card::run_done(&client, &card_id, cli.output).await
+            move_card::run_done(&client, &card_id).await
         }
 
         Commands::Rm { card_id, force } => {

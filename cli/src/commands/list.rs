@@ -2,7 +2,7 @@
 
 use crate::client::Client;
 use crate::error::Result;
-use crate::output::{print_cards, OutputFormat};
+use crate::output::print_cards;
 use crate::types::{Card, Column, Priority};
 use chrono::Utc;
 
@@ -25,7 +25,7 @@ impl Default for ListFilters {
     }
 }
 
-pub async fn run(client: &Client, filters: ListFilters, format: OutputFormat) -> Result<()> {
+pub async fn run(client: &Client, filters: ListFilters) -> Result<()> {
     // Fetch cards (API supports column filter)
     let cards = client.list_cards(filters.column).await?;
 
@@ -62,6 +62,6 @@ pub async fn run(client: &Client, filters: ListFilters, format: OutputFormat) ->
         })
         .collect();
 
-    print_cards(&filtered, format);
+    print_cards(&filtered);
     Ok(())
 }

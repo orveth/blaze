@@ -2,7 +2,7 @@
 
 use crate::client::Client;
 use crate::error::Result;
-use crate::output::{print_card_detail, OutputFormat};
+use crate::output::print_card_detail;
 use crate::types::{CardUpdate, Column, Priority};
 use chrono::{NaiveDate, TimeZone, Utc};
 
@@ -18,7 +18,7 @@ pub struct EditOptions {
     pub clear_due: bool,
 }
 
-pub async fn run(client: &Client, options: EditOptions, format: OutputFormat) -> Result<()> {
+pub async fn run(client: &Client, options: EditOptions) -> Result<()> {
     // If we're modifying tags, fetch current card first
     let tags = if !options.tags_add.is_empty() || !options.tags_remove.is_empty() {
         let current = client.get_card(&options.card_id).await?;
@@ -81,6 +81,6 @@ pub async fn run(client: &Client, options: EditOptions, format: OutputFormat) ->
     }
 
     let updated = client.update_card(&options.card_id, &update).await?;
-    print_card_detail(&updated, format);
+    print_card_detail(&updated);
     Ok(())
 }
