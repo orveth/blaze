@@ -20,6 +20,10 @@ from .models import (
     CardMove,
     CardUpdate,
     Column,
+    Plan,
+    PlanCreate,
+    PlanUpdate,
+    PlanStatus,
 )
 from .storage import get_storage
 
@@ -352,6 +356,102 @@ async def archive_column(
     })
     
     return {"archived_count": count}
+
+
+# --- Plan Endpoints ---
+
+
+@app.post("/api/plans", response_model=Plan, status_code=status.HTTP_201_CREATED)
+async def create_plan(
+    plan_data: PlanCreate,
+    _: str = Depends(verify_token),
+):
+    """Create a new plan."""
+    storage = get_storage()
+    plan = storage.create_plan(
+        title=plan_data.title,
+        description=plan_data.description,
+    )
+    logger.info(f"Created plan: {plan.id} - {plan.title}")
+    return plan
+
+
+@app.get("/api/plans", response_model=list[Plan])
+async def list_plans(
+    status_filter: str | None = None,
+    _: str = Depends(verify_token),
+):
+    """List all plans, optionally filtered by status."""
+    storage = get_storage()
+    
+    plan_status = None
+    if status_filter:
+        try:
+            plan_status = PlanStatus(status_filter)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid status: {status_filter}",
+            )
+    
+    plans = storage.list_plans(status=plan_status)
+    return plans
+
+
+@app.get("/api/plans/{plan_id}", response_model=Plan)
+async def get_plan(
+    plan_id: str,
+    _: str = Depends(verify_token),
+):
+    """Get a specific plan by ID."""
+    storage = get_storage()
+    plan = storage.get_plan(plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {plan_id} not found",
+        )
+    return plan
+
+
+@app.patch("/api/plans/{plan_id}", response_model=Plan)
+async def update_plan(
+    plan_id: str,
+    plan_data: PlanUpdate,
+    _: str = Depends(verify_token),
+):
+    """Update a plan's fields."""
+    storage = get_storage()
+    
+    plan = storage.update_plan(
+        plan_id,
+        title=plan_data.title,
+        description=plan_data.description,
+        status=plan_data.status,
+    )
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {plan_id} not found",
+        )
+    logger.info(f"Updated plan: {plan_id}")
+    return plan
+
+
+@app.delete("/api/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_plan(
+    plan_id: str,
+    _: str = Depends(verify_token),
+):
+    """Delete a plan."""
+    storage = get_storage()
+    if not storage.delete_plan(plan_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {plan_id} not found",
+        )
+    logger.info(f"Deleted plan: {plan_id}")
+    return None
 
 
 # --- Board Endpoints ---

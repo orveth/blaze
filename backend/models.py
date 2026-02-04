@@ -78,3 +78,40 @@ class Board(BaseModel):
     """Full board state."""
     columns: dict[str, list[Card]]
     stats: BoardStats
+
+
+class PlanStatus(str, Enum):
+    """Plan status levels."""
+    DRAFT = "draft"
+    READY = "ready"
+    APPROVED = "approved"
+
+
+class PlanBase(BaseModel):
+    """Base plan fields for creation/updates."""
+    title: str = Field(..., min_length=1, max_length=200)
+    description: str = Field(default="", max_length=10000)
+
+
+class PlanCreate(PlanBase):
+    """Fields for creating a new plan."""
+    pass
+
+
+class PlanUpdate(BaseModel):
+    """Fields for updating an existing plan (all optional)."""
+    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    description: Optional[str] = None
+    status: Optional[PlanStatus] = None
+
+
+class Plan(PlanBase):
+    """Full plan model with all fields."""
+    id: str
+    status: PlanStatus = PlanStatus.DRAFT
+    created_at: datetime
+    updated_at: datetime
+    position: int = 0
+
+    class Config:
+        from_attributes = True
