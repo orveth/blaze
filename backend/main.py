@@ -189,7 +189,7 @@ async def create_card(
     # Broadcast to connected clients
     await manager.broadcast({
         "type": "card_created",
-        "card": card.model_dump()
+        "card": card.model_dump(mode='json')
     })
     
     return card
@@ -230,7 +230,7 @@ async def update_card(
     # Broadcast to connected clients
     await manager.broadcast({
         "type": "card_updated",
-        "card": card.model_dump()
+        "card": card.model_dump(mode='json')
     })
     
     return card
@@ -255,7 +255,7 @@ async def move_card(
     # Broadcast to connected clients
     await manager.broadcast({
         "type": "card_moved",
-        "card": card.model_dump()
+        "card": card.model_dump(mode='json')
     })
     
     return card

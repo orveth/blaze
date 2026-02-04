@@ -221,7 +221,10 @@ function updateCardCounts(counts) {
         const columnName = column.dataset.column;
         const countEl = column.querySelector('.card-count');
         if (countEl) {
-            const count = counts[columnName] || 0;
+            // If counts provided, use it; otherwise count cards in DOM
+            const count = counts 
+                ? (counts[columnName] || 0)
+                : column.querySelectorAll('.card').length;
             countEl.textContent = count > 0 ? `(${count})` : '';
         }
     });

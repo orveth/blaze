@@ -147,24 +147,39 @@ const BoardSync = (function() {
 
     /**
      * Handle card move from WebSocket
+     * 
+     * Key insight: When the local user drags a card, the drag-drop handler
+     * has a reference to the original DOM element. If we create a NEW element
+     * here, and then the drag handler appends the OLD element, we get duplicates.
+     * 
+     * Solution: Move the existing element instead of creating a new one.
      */
     function handleCardMoved(card) {
         const existingCard = document.querySelector(`.card[data-id="${card.id}"]`);
-        if (!existingCard) {
-            console.log('[WS] Card not found for move:', card.id);
-            return;
-        }
-
         const newContainer = document.querySelector(`.cards[data-column="${card.column}"]`);
+        
         if (!newContainer) {
             console.log('[WS] Target column not found:', card.column);
             return;
         }
 
-        // Move the card
-        const newCard = window.createCardElement(card);
-        existingCard.replaceWith(newCard);
-        newContainer.appendChild(newCard);
+        if (!existingCard) {
+            // Card doesn't exist locally - must be from another client
+            const newCard = window.createCardElement(card);
+            newContainer.appendChild(newCard);
+            window.updateCardCounts();
+            console.log('[WS] Created card in column:', card.id, card.column);
+            return;
+        }
+
+        // Skip if card is already in the correct column
+        if (existingCard.closest('.cards') === newContainer) {
+            console.log('[WS] Card already in correct column:', card.id);
+            return;
+        }
+
+        // Move the EXISTING element (don't create new - prevents duplicates)
+        newContainer.appendChild(existingCard);
         window.updateCardCounts();
         console.log('[WS] Moved card:', card.id, 'to', card.column);
     }
