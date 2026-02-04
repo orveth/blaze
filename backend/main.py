@@ -185,6 +185,13 @@ async def create_card(
         tags=card_data.tags,
     )
     logger.info(f"Created card: {card.id} - {card.title}")
+    
+    # Broadcast to connected clients
+    await manager.broadcast({
+        "type": "card_created",
+        "card": card.model_dump()
+    })
+    
     return card
 
 
@@ -219,6 +226,13 @@ async def update_card(
             detail=f"Card {card_id} not found",
         )
     logger.info(f"Updated card: {card_id}")
+    
+    # Broadcast to connected clients
+    await manager.broadcast({
+        "type": "card_updated",
+        "card": card.model_dump()
+    })
+    
     return card
 
 
@@ -237,6 +251,13 @@ async def move_card(
             detail=f"Card {card_id} not found",
         )
     logger.info(f"Moved card {card_id} to {move_data.column.value}")
+    
+    # Broadcast to connected clients
+    await manager.broadcast({
+        "type": "card_moved",
+        "card": card.model_dump()
+    })
+    
     return card
 
 
@@ -253,6 +274,13 @@ async def delete_card(
             detail=f"Card {card_id} not found",
         )
     logger.info(f"Deleted card: {card_id}")
+    
+    # Broadcast to connected clients
+    await manager.broadcast({
+        "type": "card_deleted",
+        "card_id": card_id
+    })
+    
     return None
 
 

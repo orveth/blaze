@@ -776,3 +776,7 @@ function showToast(message, type = 'info') {
         setTimeout(() => toast.remove(), 200);
     }, 2500);
 }
+
+// Export functions for WebSocket sync module
+window.createCardElement = createCardElement;
+window.updateCardCounts = updateCardCounts;

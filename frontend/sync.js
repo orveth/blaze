@@ -85,11 +85,103 @@ const BoardSync = (function() {
 
     /**
      * Handle board update from server
-     * Phase 2 will implement handlers for card_created, card_updated, etc.
      */
     function handleUpdate(msg) {
         console.log('[WS] Received:', msg);
-        // Phase 2 will implement handlers for card_created, card_updated, etc.
+        
+        switch (msg.type) {
+            case 'card_created':
+                handleCardCreated(msg.card);
+                break;
+            case 'card_updated':
+                handleCardUpdated(msg.card);
+                break;
+            case 'card_moved':
+                handleCardMoved(msg.card);
+                break;
+            case 'card_deleted':
+                handleCardDeleted(msg.card_id);
+                break;
+            default:
+                console.warn('[WS] Unknown message type:', msg.type);
+        }
+    }
+
+    /**
+     * Handle card creation from WebSocket
+     */
+    function handleCardCreated(card) {
+        // Check if card already exists (might be our own mutation)
+        const existing = document.querySelector(`.card[data-id="${card.id}"]`);
+        if (existing) {
+            console.log('[WS] Card already exists:', card.id);
+            return;
+        }
+
+        // Create card element
+        const cardEl = window.createCardElement(card);
+        const container = document.querySelector(`.cards[data-column="${card.column}"]`);
+        
+        if (container) {
+            container.appendChild(cardEl);
+            window.updateCardCounts();
+            console.log('[WS] Added card:', card.id);
+        }
+    }
+
+    /**
+     * Handle card update from WebSocket
+     */
+    function handleCardUpdated(card) {
+        const existingCard = document.querySelector(`.card[data-id="${card.id}"]`);
+        if (!existingCard) {
+            console.log('[WS] Card not found for update:', card.id);
+            return;
+        }
+
+        // Replace the card element
+        const newCard = window.createCardElement(card);
+        existingCard.replaceWith(newCard);
+        console.log('[WS] Updated card:', card.id);
+    }
+
+    /**
+     * Handle card move from WebSocket
+     */
+    function handleCardMoved(card) {
+        const existingCard = document.querySelector(`.card[data-id="${card.id}"]`);
+        if (!existingCard) {
+            console.log('[WS] Card not found for move:', card.id);
+            return;
+        }
+
+        const newContainer = document.querySelector(`.cards[data-column="${card.column}"]`);
+        if (!newContainer) {
+            console.log('[WS] Target column not found:', card.column);
+            return;
+        }
+
+        // Move the card
+        const newCard = window.createCardElement(card);
+        existingCard.replaceWith(newCard);
+        newContainer.appendChild(newCard);
+        window.updateCardCounts();
+        console.log('[WS] Moved card:', card.id, 'to', card.column);
+    }
+
+    /**
+     * Handle card deletion from WebSocket
+     */
+    function handleCardDeleted(cardId) {
+        const card = document.querySelector(`.card[data-id="${cardId}"]`);
+        if (!card) {
+            console.log('[WS] Card not found for deletion:', cardId);
+            return;
+        }
+
+        card.remove();
+        window.updateCardCounts();
+        console.log('[WS] Deleted card:', cardId);
     }
 
     /**
