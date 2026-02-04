@@ -335,39 +335,46 @@ function setupDragAndDrop() {
             // Skip if dropping in same column
             if (oldColumn === newColumn) return;
 
+            // --- Optimistic UI Update ---
+            // Move immediately, before API call
+            
+            // Remove empty state from target if present
+            const emptyState = container.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+
+            // Move the card element immediately
+            container.appendChild(card);
+
+            // Update counts immediately
+            updateCardCounts();
+
+            // Add empty state to old column if now empty
+            if (oldContainer && oldContainer.querySelectorAll('.card').length === 0) {
+                oldContainer.innerHTML = '<div class="empty-state">No cards yet</div>';
+            }
+
+            // --- API Call (background) ---
             try {
                 await apiCall(`/cards/${cardId}/move`, {
                     method: 'PATCH',
                     body: JSON.stringify({ column: newColumn })
                 });
-
-                // Remove empty state from target if present
-                const emptyState = container.querySelector('.empty-state');
-                if (emptyState) emptyState.remove();
-
-                // Move the card element
-                container.appendChild(card);
-
-                // Add empty state to old column if now empty
-                if (oldContainer && oldContainer.querySelectorAll('.card').length === 0) {
-                    oldContainer.innerHTML = '<div class="empty-state">No cards yet</div>';
-                }
-
-                // Update counts
-                const oldCount = oldContainer.closest('.column').querySelector('.card-count');
-                const newCount = container.closest('.column').querySelector('.card-count');
-                
-                if (oldCount) {
-                    const oldNum = parseInt(oldCount.textContent.replace(/[()]/g, '')) || 0;
-                    oldCount.textContent = oldNum - 1 > 0 ? `(${oldNum - 1})` : '';
-                }
-                if (newCount) {
-                    const newNum = parseInt(newCount.textContent.replace(/[()]/g, '')) || 0;
-                    newCount.textContent = `(${newNum + 1})`;
-                }
+                // Success - WS broadcast will arrive but card already in correct place
             } catch (error) {
+                // Revert on failure
                 showToast(`Failed to move: ${error.message}`, 'error');
-                loadBoard();
+                
+                // Move card back to old column
+                const emptyStateOld = oldContainer.querySelector('.empty-state');
+                if (emptyStateOld) emptyStateOld.remove();
+                oldContainer.appendChild(card);
+                
+                // Add empty state to new column if now empty
+                if (container.querySelectorAll('.card').length === 0) {
+                    container.innerHTML = '<div class="empty-state">No cards yet</div>';
+                }
+                
+                updateCardCounts();
             }
         });
     });
