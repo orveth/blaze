@@ -41,13 +41,14 @@ self.addEventListener('activate', (event) => {
   return self.clients.claim();
 });
 
-// Fetch event - network-first strategy for API, cache-first for static assets
+// Fetch event - network-first for API/HTML, cache-first for static assets
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // API requests: network-first (with cache fallback for offline)
-  if (url.pathname.startsWith('/api/')) {
+  // API requests & HTML: network-first (with cache fallback for offline)
+  // HTML needs network-first to get fresh cache-busted static asset URLs
+  if (url.pathname.startsWith('/api/') || url.pathname === '/') {
     event.respondWith(
       fetch(request)
         .then((response) => {
@@ -59,14 +60,15 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // Network failed, try cache
+          // Network failed, try cache (offline fallback)
           return caches.match(request);
         })
     );
     return;
   }
 
-  // Static assets: cache-first (with network fallback)
+  // Static assets (/static/*): cache-first (with network fallback)
+  // Cache-busted URLs (e.g., /static/app.js?v=abc123) ensure freshness
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
