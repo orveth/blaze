@@ -450,6 +450,48 @@ async def serve_index():
     return {"message": "Frontend not found. API is running at /api/"}
 
 
+@app.get("/sw.js")
+async def serve_service_worker():
+    """Serve service worker from root for proper scope."""
+    sw_path = frontend_path / "sw.js"
+    if sw_path.exists():
+        return FileResponse(
+            sw_path,
+            media_type="application/javascript",
+            headers={"Cache-Control": "no-cache, must-revalidate"}
+        )
+    raise HTTPException(status_code=404, detail="Service worker not found")
+
+
+@app.get("/manifest.json")
+async def serve_manifest():
+    """Serve PWA manifest from root."""
+    manifest_path = frontend_path / "manifest.json"
+    if manifest_path.exists():
+        return FileResponse(
+            manifest_path,
+            media_type="application/manifest+json",
+            headers={"Cache-Control": "public, max-age=86400"}
+        )
+    raise HTTPException(status_code=404, detail="Manifest not found")
+
+
+@app.get("/icon-{size}.png")
+async def serve_icon(size: str):
+    """Serve PWA icons from root."""
+    if size not in ["192", "512"]:
+        raise HTTPException(status_code=404, detail="Invalid icon size")
+    
+    icon_path = frontend_path / f"icon-{size}.png"
+    if icon_path.exists():
+        return FileResponse(
+            icon_path,
+            media_type="image/png",
+            headers={"Cache-Control": "public, max-age=31536000"}
+        )
+    raise HTTPException(status_code=404, detail="Icon not found")
+
+
 # Custom static files handler with cache headers
 class CachedStaticFiles(StaticFiles):
     """StaticFiles with aggressive caching (files are cache-busted via query params)."""

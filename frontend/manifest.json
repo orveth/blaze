@@ -1,0 +1,19 @@
+{
+  "name": "Blaze",
+  "short_name": "Blaze",
+  "description": "Personal kanban board for focused task management",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f0e",
+  "theme_color": "#0f0f0e",
+  "orientation": "any",
+  "categories": ["productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Add Card",
+      "short_name": "New",
+      "description": "Create a new task card",
+      "url": "/?action=new"
+    }
+  ]
+}
