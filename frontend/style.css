@@ -22,6 +22,7 @@
     --mark-medium: #968e7d;
     --mark-high: #d4b670;
     --mark-urgent: #d26b59;
+    --mark-urgent-dim: #a84a3a;
     
     /* Structural */
     --border: #2a2a27;
@@ -176,7 +177,7 @@ button {
 }
 
 .btn-danger:hover {
-    background: #a84a3a;
+    background: var(--mark-urgent-dim);
 }
 
 /* Board */

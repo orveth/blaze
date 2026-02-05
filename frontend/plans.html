@@ -32,10 +32,10 @@
     </header>
     
     <!-- Filter Bar -->
-    <div class="filter-bar plans-filter">
+    <nav class="filter-bar plans-filter" aria-label="Filter plans">
         <div class="filter-group">
-            <span class="filter-label">Status</span>
-            <div class="filter-chips">
+            <span class="filter-label" id="statusFilterLabel">Status</span>
+            <div class="filter-chips" role="group" aria-labelledby="statusFilterLabel">
                 <label class="filter-chip" data-status="draft">
                     <input type="checkbox" value="draft" data-filter="status">
                     <span>Draft</span>
@@ -50,22 +50,22 @@
                 </label>
             </div>
         </div>
-    </div>
+    </nav>
 
     <main class="plans-main">
         <!-- Plans Grid -->
-        <div class="plans-grid-container">
-            <div class="plans-grid-header">
+        <section class="plans-grid-container" aria-label="Plans list">
+            <header class="plans-grid-header">
                 <h2 id="plansCount">Plans</h2>
-            </div>
-            <div class="plans-grid" id="plansGrid">
+            </header>
+            <div class="plans-grid" id="plansGrid" role="list">
                 <div class="loading">Loading plans...</div>
             </div>
-        </div>
-        
+        </section>
+
         <!-- Plan Detail Panel (slides in) -->
-        <div class="plan-detail-overlay" id="detailOverlay"></div>
-        <aside class="plan-detail" id="planDetail">
+        <div class="plan-detail-overlay" id="detailOverlay" aria-hidden="true"></div>
+        <aside class="plan-detail" id="planDetail" aria-label="Plan details">
             <!-- Populated by JS -->
         </aside>
     </main>
