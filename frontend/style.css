@@ -158,6 +158,68 @@ button {
     background: var(--accent-dim);
 }
 
+/* Hamburger menu (mobile only) */
+.hamburger-btn {
+    display: none;
+}
+
+.mobile-menu {
+    display: none;
+    position: absolute;
+    top: 48px;
+    right: 0;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    min-width: 160px;
+    z-index: 1000;
+    margin: 0.5rem;
+}
+
+.mobile-menu.show {
+    display: block;
+}
+
+.mobile-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: none;
+    background: none;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+}
+
+.mobile-menu-item:last-child {
+    border-bottom: none;
+}
+
+.mobile-menu-item:hover {
+    background: var(--bg-hover);
+}
+
+.mobile-menu-item svg {
+    flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+    /* Hide desktop stats/logout buttons */
+    #statsBtn,
+    #logoutBtn {
+        display: none;
+    }
+    
+    /* Show hamburger */
+    .hamburger-btn {
+        display: block;
+    }
+}
+
 .btn-ghost {
     padding: 0.5rem 0.75rem;
     border-radius: var(--radius);

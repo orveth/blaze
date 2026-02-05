@@ -69,6 +69,39 @@ function setupEventListeners() {
     // Login
     loginForm.addEventListener('submit', handleLogin);
     document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+    
+    // Mobile menu
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+    const mobileStatsBtn = document.getElementById('mobileStatsBtn');
+    const mobileLogoutBtn = document.getElementById('mobileLogoutBtn');
+    
+    hamburgerBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isExpanded = hamburgerBtn.getAttribute('aria-expanded') === 'true';
+        hamburgerBtn.setAttribute('aria-expanded', !isExpanded);
+        mobileMenu.classList.toggle('show');
+    });
+    
+    mobileStatsBtn.addEventListener('click', () => {
+        mobileMenu.classList.remove('show');
+        hamburgerBtn.setAttribute('aria-expanded', 'false');
+        openStatsModal();
+    });
+    
+    mobileLogoutBtn.addEventListener('click', () => {
+        mobileMenu.classList.remove('show');
+        hamburgerBtn.setAttribute('aria-expanded', 'false');
+        handleLogout();
+    });
+    
+    // Close mobile menu when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!mobileMenu.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+            mobileMenu.classList.remove('show');
+            hamburgerBtn.setAttribute('aria-expanded', 'false');
+        }
+    });
 
     // Card Modal
     document.getElementById('addCardBtn').addEventListener('click', () => openCardModal());
