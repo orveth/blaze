@@ -92,7 +92,6 @@ const Filters = (function() {
     function apply() {
         const hasPriorityFilter = activeFilters.priorities.size > 0;
         const hasTagFilter = activeFilters.tags.size > 0;
-        const hasAnyFilter = hasPriorityFilter || hasTagFilter;
         
         document.querySelectorAll('.card').forEach(card => {
             let visible = true;
@@ -122,21 +121,6 @@ const Filters = (function() {
             }
         });
         
-        // Update empty states
-        document.querySelectorAll('.cards').forEach(container => {
-            const visibleCards = container.querySelectorAll('.card:not(.filtered-out)');
-            const emptyState = container.querySelector('.empty-state');
-            
-            if (visibleCards.length === 0 && hasAnyFilter) {
-                // Remove empty state when filtering
-                if (emptyState) {
-                    emptyState.remove();
-                }
-            } else if (emptyState && !hasAnyFilter) {
-                // Remove empty state when no filters
-                emptyState.remove();
-            }
-        });
     }
 
     /**
