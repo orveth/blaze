@@ -128,16 +128,13 @@ const Filters = (function() {
             const emptyState = container.querySelector('.empty-state');
             
             if (visibleCards.length === 0 && hasAnyFilter) {
-                if (!emptyState) {
-                    const div = document.createElement('div');
-                    div.className = 'empty-state';
-                    div.textContent = 'No matching cards';
-                    container.appendChild(div);
-                } else {
-                    emptyState.textContent = 'No matching cards';
+                // Remove empty state when filtering
+                if (emptyState) {
+                    emptyState.remove();
                 }
             } else if (emptyState && !hasAnyFilter) {
-                emptyState.textContent = 'No cards yet';
+                // Remove empty state when no filters
+                emptyState.remove();
             }
         });
     }
