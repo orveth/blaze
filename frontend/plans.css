@@ -289,16 +289,16 @@
 .plan-detail-header {
     display: flex;
     flex-direction: column;
-    padding: 1.5rem 1.75rem;
+    padding: 1.25rem 1.5rem;
     border-bottom: 1px solid var(--border);
     background: var(--bg);
 }
 
 .plan-detail-top {
     display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    margin-bottom: 1rem;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
 }
 
 .plan-detail-close {
@@ -310,7 +310,6 @@
     border-radius: var(--radius);
     color: var(--text-2);
     flex-shrink: 0;
-    order: -1;
 }
 
 .plan-detail-close:hover {
@@ -323,31 +322,34 @@
     outline-offset: 2px;
 }
 
-.plan-detail-info {
-    flex: 1;
-    min-width: 0;
-}
-
 .plan-detail-title {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 600;
     color: var(--text);
     margin: 0;
     line-height: 1.3;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .plan-detail-meta {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 0.5rem 1rem;
-    font-size: 13px;
+    gap: 0.5rem;
+    font-size: 12px;
     color: var(--text-3);
-    margin-top: 0.75rem;
 }
 
 .plan-detail-meta span {
-    text-decoration: none;
+    text-decoration: none !important;
+}
+
+.plan-detail-meta .meta-separator {
+    color: var(--text-3);
+    opacity: 0.5;
 }
 
 .plan-detail-meta .status-badge {
@@ -366,16 +368,6 @@
     line-height: 1.5;
 }
 
-.plan-detail-actions {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.plan-detail-actions .nav-btn {
-    padding: 0.625rem 1.25rem;
-    min-height: 44px;
-}
-
 /* Files list in detail */
 .plan-detail-files {
     flex: 1;
@@ -387,35 +379,43 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
 }
 
 .files-section-header h3 {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--text-2);
+    color: var(--text-3);
 }
 
-.add-file-btn {
+.files-header-actions {
     display: flex;
     align-items: center;
-    gap: 0.375rem;
-    padding: 0.5rem 0.75rem;
-    min-width: 44px;
-    min-height: 44px;
-    font-size: 13px;
-    color: var(--text-2);
-    border-radius: var(--radius);
+    gap: 0.25rem;
 }
 
-.add-file-btn:hover {
+.icon-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius);
+    color: var(--text-3);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.icon-btn:hover {
     background: var(--bg-hover);
     color: var(--text);
 }
 
-.add-file-btn:focus-visible {
+.icon-btn:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
 }
@@ -614,37 +614,26 @@
     }
 
     .plan-detail-header {
-        padding: 1.25rem;
-        padding-top: calc(1.25rem + env(safe-area-inset-top, 0));
+        padding: 1rem;
+        padding-top: calc(1rem + env(safe-area-inset-top, 0));
     }
 
     .plan-detail-top {
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
     }
 
     .plan-detail-title {
-        font-size: 20px;
+        font-size: 18px;
     }
 
     .plan-detail-meta {
-        font-size: 13px;
-        gap: 0.375rem 0.75rem;
-    }
-
-    .plan-detail-actions {
-        width: 100%;
-        margin-top: 1.25rem;
-    }
-
-    .plan-detail-actions .nav-btn {
-        flex: 1;
-        justify-content: center;
-        padding: 0.875rem 1rem;
-        min-height: 48px;
+        font-size: 11px;
+        gap: 0.25rem;
+        flex-wrap: wrap;
     }
 
     .plan-detail-files {
-        padding: 1.25rem;
+        padding: 1rem;
     }
 
     .file-card {
@@ -652,9 +641,9 @@
         min-height: 68px;
     }
 
-    .add-file-btn {
-        min-height: 48px;
-        padding: 0.75rem 1rem;
+    .icon-btn {
+        width: 40px;
+        height: 40px;
     }
 
     .modal-lg {

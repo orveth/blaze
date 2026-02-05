@@ -277,24 +277,30 @@ function renderPlanDetail(plan) {
             </div>
             <div class="plan-detail-meta">
                 <span class="status-badge ${plan.status}" data-plan-id="${plan.id}" onclick="openStatusDropdown(event, '${plan.id}')">${plan.status}</span>
+                <span class="meta-separator">·</span>
                 <span class="plan-detail-timestamp">Created ${formatDate(plan.created_at)}</span>
+                <span class="meta-separator">·</span>
                 <span class="plan-detail-timestamp">Updated ${formatDate(plan.updated_at)}</span>
             </div>
             ${plan.description ? `<p class="plan-detail-description">${escapeHtml(plan.description)}</p>` : ''}
-            <div class="plan-detail-actions">
-                <button class="nav-btn" onclick="openPlanModal('${plan.id}')">Edit Plan</button>
-            </div>
         </header>
         
         <div class="plan-detail-files">
             <div class="files-section-header">
                 <h3>Files</h3>
-                <button class="add-file-btn" onclick="openFileModal('${plan.id}')">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 5v14M5 12h14" stroke-linecap="round"/>
-                    </svg>
-                    Add File
-                </button>
+                <div class="files-header-actions">
+                    <button class="icon-btn" onclick="openPlanModal('${plan.id}')" aria-label="Edit plan" title="Edit plan">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <button class="icon-btn" onclick="openFileModal('${plan.id}')" aria-label="Add file" title="Add file">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14M5 12h14" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
             
             <div class="file-list">
