@@ -92,7 +92,6 @@ const Filters = (function() {
     function apply() {
         const hasPriorityFilter = activeFilters.priorities.size > 0;
         const hasTagFilter = activeFilters.tags.size > 0;
-        const hasAnyFilter = hasPriorityFilter || hasTagFilter;
         
         document.querySelectorAll('.card').forEach(card => {
             let visible = true;
@@ -122,24 +121,6 @@ const Filters = (function() {
             }
         });
         
-        // Update empty states
-        document.querySelectorAll('.cards').forEach(container => {
-            const visibleCards = container.querySelectorAll('.card:not(.filtered-out)');
-            const emptyState = container.querySelector('.empty-state');
-            
-            if (visibleCards.length === 0 && hasAnyFilter) {
-                if (!emptyState) {
-                    const div = document.createElement('div');
-                    div.className = 'empty-state';
-                    div.textContent = 'No matching cards';
-                    container.appendChild(div);
-                } else {
-                    emptyState.textContent = 'No matching cards';
-                }
-            } else if (emptyState && !hasAnyFilter) {
-                emptyState.textContent = 'No cards yet';
-            }
-        });
     }
 
     /**

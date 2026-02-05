@@ -281,7 +281,7 @@ function renderBoard(columns) {
         counts[columnName] = cards.length;
 
         if (cards.length === 0) {
-            container.innerHTML = '<div class="empty-state">No cards yet</div>';
+            container.innerHTML = '';
             return;
         }
 
@@ -427,9 +427,9 @@ function setupDragAndDrop() {
             // Update counts immediately
             updateCardCounts();
 
-            // Add empty state to old column if now empty
+            // Clear old column if now empty
             if (oldContainer && oldContainer.querySelectorAll('.card').length === 0) {
-                oldContainer.innerHTML = '<div class="empty-state">No cards yet</div>';
+                oldContainer.innerHTML = '';
             }
 
             // --- API Call (background) ---
@@ -448,9 +448,9 @@ function setupDragAndDrop() {
                 if (emptyStateOld) emptyStateOld.remove();
                 oldContainer.appendChild(card);
                 
-                // Add empty state to new column if now empty
+                // Clear new column if now empty
                 if (container.querySelectorAll('.card').length === 0) {
-                    container.innerHTML = '<div class="empty-state">No cards yet</div>';
+                    container.innerHTML = '';
                 }
                 
                 updateCardCounts();
@@ -602,7 +602,7 @@ function setupTouchDrag() {
                 dropZone.appendChild(card);
 
                 if (oldContainer.querySelectorAll('.card').length === 0) {
-                    oldContainer.innerHTML = '<div class="empty-state">No cards yet</div>';
+                    oldContainer.innerHTML = '';
                 }
 
                 // Update counts
