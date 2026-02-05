@@ -90,12 +90,17 @@
             </header>
             <form id="planForm">
                 <input type="hidden" id="planId" name="planId">
-                
+
                 <div class="field">
                     <label for="planTitle">Title</label>
                     <input type="text" id="planTitle" name="title" required maxlength="200" placeholder="Plan title">
                 </div>
-                
+
+                <div class="field">
+                    <label for="planDescription">Description <span class="field-optional">(optional)</span></label>
+                    <textarea id="planDescription" name="description" maxlength="2000" rows="3" placeholder="Brief summary of this plan..."></textarea>
+                </div>
+
                 <div class="field" id="statusField" style="display: none;">
                     <label for="planStatus">Status</label>
                     <select id="planStatus" name="status">
@@ -104,7 +109,7 @@
                         <option value="approved">Approved</option>
                     </select>
                 </div>
-                
+
                 <footer class="modal-footer">
                     <button type="button" class="btn-ghost" id="deletePlanBtn" style="display: none;">Delete</button>
                     <div class="spacer"></div>

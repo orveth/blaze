@@ -113,12 +113,14 @@ class PlanFileUpdate(BaseModel):
 class PlanCreate(BaseModel):
     """Fields for creating a new plan."""
     title: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=2000)
     files: list[PlanFileCreate] = Field(default_factory=list, description="Initial files (optional)")
 
 
 class PlanUpdate(BaseModel):
     """Fields for updating an existing plan (all optional)."""
     title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=2000)
     status: Optional[PlanStatus] = None
 
 
@@ -126,6 +128,7 @@ class Plan(BaseModel):
     """Full plan model with all fields."""
     id: str
     title: str
+    description: Optional[str] = None
     status: PlanStatus = PlanStatus.DRAFT
     files: list[PlanFile] = Field(default_factory=list)
     created_at: datetime

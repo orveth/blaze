@@ -634,6 +634,13 @@ dialog::backdrop {
     letter-spacing: 0.04em;
 }
 
+.field-optional {
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    opacity: 0.7;
+}
+
 .field-row {
     display: grid;
     grid-template-columns: 1fr 1fr;

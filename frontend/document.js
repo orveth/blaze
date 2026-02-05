@@ -12,6 +12,7 @@ let plan = null;
 let file = null;
 let isEditing = false;
 let hasUnsavedChanges = false;
+let isNewFile = false;
 
 // --- DOM Elements ---
 const loginModal = document.getElementById('loginModal');
@@ -38,26 +39,38 @@ const previewContent = document.getElementById('previewContent');
 document.addEventListener('DOMContentLoaded', init);
 
 function init() {
-    // Parse URL: /doc/planId/filename
+    // Parse URL: /doc/planId/filename or /doc/planId/new
     const path = window.location.pathname;
     const match = path.match(/^\/doc\/([^/]+)\/(.+)$/);
-    
+
     if (!match) {
         toast('Invalid document URL', 'error');
         return;
     }
-    
+
     planId = match[1];
-    fileName = decodeURIComponent(match[2]);
-    originalFileName = fileName;
-    
+    const filenamePart = decodeURIComponent(match[2]);
+
+    if (filenamePart === 'new') {
+        isNewFile = true;
+        fileName = '';
+        originalFileName = '';
+    } else {
+        fileName = filenamePart;
+        originalFileName = fileName;
+    }
+
     if (!token) {
         showLogin();
         return;
     }
-    
+
     setupEventListeners();
-    loadDocument();
+    if (isNewFile) {
+        loadPlanForNewFile();
+    } else {
+        loadDocument();
+    }
 }
 
 function setupEventListeners() {
@@ -188,22 +201,22 @@ async function loadDocument() {
     try {
         // Load plan info
         plan = await api(`/api/plans/${planId}`);
-        
+
         // Find file
         file = plan.files.find(f => f.name === fileName);
         if (!file) {
             throw new Error('File not found');
         }
-        
+
         // Update UI
         document.title = `${file.name} — Blaze`;
-        backLink.href = `/plans#${planId}`;
+        setupBackLink();
         planTitleEl.textContent = plan.title;
         fileNameEl.textContent = file.name;
-        
+
         // Render content
         renderMarkdown(file.content);
-        
+
     } catch (err) {
         docContent.innerHTML = `
             <div class="empty-doc">
@@ -212,6 +225,47 @@ async function loadDocument() {
             </div>
         `;
     }
+}
+
+async function loadPlanForNewFile() {
+    try {
+        // Load plan info
+        plan = await api(`/api/plans/${planId}`);
+
+        // Update UI for new file mode
+        document.title = 'New File — Blaze';
+        setupBackLink();
+        planTitleEl.textContent = plan.title;
+        fileNameEl.textContent = 'New File';
+
+        // Create empty file object
+        file = { name: '', content: '' };
+
+        // Go directly into edit mode
+        enterEditMode();
+
+    } catch (err) {
+        docContent.innerHTML = `
+            <div class="empty-doc">
+                <p>${escapeHtml(err.message)}</p>
+                <a href="/plans" class="btn-ghost">Back to Plans</a>
+            </div>
+        `;
+    }
+}
+
+function setupBackLink() {
+    backLink.href = '/plans';
+    backLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (hasUnsavedChanges && isEditing) {
+            if (!confirm('Discard unsaved changes?')) {
+                return;
+            }
+        }
+        sessionStorage.setItem('blaze_open_plan', planId);
+        window.location.href = '/plans';
+    });
 }
 
 function renderMarkdown(content) {
@@ -256,7 +310,14 @@ function cancelEdit() {
             return;
         }
     }
-    
+
+    if (isNewFile) {
+        // For new files, go back to the plan
+        sessionStorage.setItem('blaze_open_plan', planId);
+        window.location.href = '/plans';
+        return;
+    }
+
     exitEditMode();
 }
 
@@ -274,42 +335,64 @@ function exitEditMode() {
 async function saveDocument() {
     const newName = filenameInput.value.trim();
     const newContent = docEditor.value;
-    
+
     if (!newName) {
         toast('Filename is required', 'error');
         filenameInput.focus();
         return;
     }
-    
+
     try {
-        await api(`/api/plans/${planId}/files/${encodeURIComponent(originalFileName)}`, {
-            method: 'PATCH',
-            body: JSON.stringify({ name: newName, content: newContent })
-        });
-        
-        // Update local state
-        file.name = newName;
-        file.content = newContent;
-        fileName = newName;
-        originalFileName = newName;
-        
+        if (isNewFile) {
+            // Create new file
+            await api(`/api/plans/${planId}/files`, {
+                method: 'POST',
+                body: JSON.stringify({ name: newName, content: newContent })
+            });
+
+            // Update state
+            isNewFile = false;
+            file.name = newName;
+            file.content = newContent;
+            fileName = newName;
+            originalFileName = newName;
+
+            // Update URL to the actual file path
+            const newPath = `/doc/${planId}/${encodeURIComponent(newName)}`;
+            history.replaceState(null, '', newPath);
+
+            toast('File created', 'success');
+        } else {
+            // Update existing file
+            await api(`/api/plans/${planId}/files/${encodeURIComponent(originalFileName)}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ name: newName, content: newContent })
+            });
+
+            // Update local state
+            file.name = newName;
+            file.content = newContent;
+            fileName = newName;
+            originalFileName = newName;
+
+            // Update URL if filename changed
+            const newPath = `/doc/${planId}/${encodeURIComponent(newName)}`;
+            if (window.location.pathname !== newPath) {
+                history.replaceState(null, '', newPath);
+            }
+
+            toast('Saved', 'success');
+        }
+
         // Update UI
         fileNameEl.textContent = newName;
         document.title = `${newName} — Blaze`;
-        
-        // Update URL if filename changed
-        const newPath = `/doc/${planId}/${encodeURIComponent(newName)}`;
-        if (window.location.pathname !== newPath) {
-            history.replaceState(null, '', newPath);
-        }
-        
+
         // Re-render and exit edit mode
         renderMarkdown(newContent);
         hasUnsavedChanges = false;
         exitEditMode();
-        
-        toast('Saved', 'success');
-        
+
     } catch (err) {
         toast(err.message, 'error');
     }

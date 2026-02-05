@@ -87,6 +87,7 @@ class Storage:
         return {
             "id": plan.id,
             "title": plan.title,
+            "description": plan.description,
             "status": plan.status.value,
             "files": [{"name": f.name, "content": f.content} for f in plan.files],
             "created_at": plan.created_at.isoformat(),
@@ -101,12 +102,13 @@ class Storage:
         if not files_data and data.get("description"):
             # Migrate old single description to files format
             files_data = [{"name": "plan.md", "content": data["description"]}]
-        
+
         files = [PlanFile(name=f["name"], content=f["content"]) for f in files_data]
-        
+
         return Plan(
             id=data["id"],
             title=data["title"],
+            description=data.get("description"),
             status=PlanStatus(data.get("status", "draft")),
             files=files,
             created_at=datetime.fromisoformat(data["created_at"]),
@@ -260,36 +262,38 @@ class Storage:
 
     # Plan methods
 
-    def create_plan(self, title: str, files: list[dict] | None = None) -> Plan:
+    def create_plan(self, title: str, description: str | None = None, files: list[dict] | None = None) -> Plan:
         """Create a new plan.
-        
+
         Args:
             title: Plan title
+            description: Optional plan description
             files: Optional list of {"name": str, "content": str} dicts
         """
         data = self._read_data()
-        
+
         # Ensure plans key exists
         if "plans" not in data:
             data["plans"] = {}
-        
+
         plan_id = generate_id()
         now = now_utc()
-        
+
         plan_files = []
         if files:
             plan_files = [PlanFile(name=f["name"], content=f.get("content", "")) for f in files]
-        
+
         plan = Plan(
             id=plan_id,
             title=title,
+            description=description,
             status=PlanStatus.DRAFT,
             files=plan_files,
             created_at=now,
             updated_at=now,
             position=len(data["plans"]),
         )
-        
+
         data["plans"][plan_id] = self._plan_to_dict(plan)
         self._write_data(data)
         return plan
@@ -323,23 +327,26 @@ class Storage:
         self,
         plan_id: str,
         title: Optional[str] = None,
+        description: Optional[str] = None,
         status: Optional[PlanStatus] = None,
     ) -> Optional[Plan]:
-        """Update a plan's title or status."""
+        """Update a plan's title, description, or status."""
         data = self._read_data()
-        
+
         if "plans" not in data or plan_id not in data["plans"]:
             return None
-        
+
         plan_data = data["plans"][plan_id]
-        
+
         if title is not None:
             plan_data["title"] = title
+        if description is not None:
+            plan_data["description"] = description
         if status is not None:
             plan_data["status"] = status.value
-        
+
         plan_data["updated_at"] = now_utc().isoformat()
-        
+
         self._write_data(data)
         return self._dict_to_plan(plan_data)
 

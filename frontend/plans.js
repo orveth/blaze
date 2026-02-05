@@ -14,8 +14,6 @@ const loginModal = document.getElementById('loginModal');
 const loginForm = document.getElementById('loginForm');
 const planModal = document.getElementById('planModal');
 const planForm = document.getElementById('planForm');
-const fileModal = document.getElementById('fileModal');
-const fileForm = document.getElementById('fileForm');
 const confirmModal = document.getElementById('confirmModal');
 const plansGrid = document.getElementById('plansGrid');
 const plansCount = document.getElementById('plansCount');
@@ -31,9 +29,22 @@ async function init() {
         showLogin();
         return;
     }
-    
+
     setupEventListeners();
     await loadPlans();
+
+    // Check if we should auto-open a plan (from back navigation)
+    const openPlanId = sessionStorage.getItem('blaze_open_plan');
+    if (openPlanId) {
+        sessionStorage.removeItem('blaze_open_plan');
+        const plan = plans.find(p => p.id === openPlanId);
+        if (plan) {
+            selectedPlanId = openPlanId;
+            renderPlanDetail(plan);
+            openDetail();
+            renderPlansGrid();
+        }
+    }
 }
 
 function setupEventListeners() {
@@ -52,10 +63,6 @@ function setupEventListeners() {
     document.getElementById('deletePlanBtn').addEventListener('click', confirmDeletePlan);
     planModal.querySelector('.close-btn').addEventListener('click', () => planModal.close());
     
-    // File modal
-    fileForm.addEventListener('submit', handleFileSubmit);
-    document.getElementById('cancelFileBtn').addEventListener('click', () => fileModal.close());
-    fileModal.querySelector('.close-btn').addEventListener('click', () => fileModal.close());
     
     // Confirm modal
     document.getElementById('confirmCancel').addEventListener('click', () => {
@@ -73,7 +80,7 @@ function setupEventListeners() {
     detailOverlay.addEventListener('click', closeDetail);
     
     // Close modals on backdrop click
-    [loginModal, planModal, fileModal, confirmModal].forEach(modal => {
+    [loginModal, planModal, confirmModal].forEach(modal => {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.close();
         });
@@ -82,8 +89,7 @@ function setupEventListeners() {
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            if (fileModal.open) fileModal.close();
-            else if (planModal.open) planModal.close();
+            if (planModal.open) planModal.close();
             else if (confirmModal.open) confirmModal.close();
             else if (selectedPlanId) closeDetail();
         }
@@ -206,13 +212,14 @@ function renderPlansGrid() {
     }
     
     plansGrid.innerHTML = filteredPlans.map(plan => `
-        <div class="plan-card ${plan.id === selectedPlanId ? 'selected' : ''}" 
+        <div class="plan-card ${plan.id === selectedPlanId ? 'selected' : ''}"
              data-plan-id="${plan.id}"
              onclick="selectPlan('${plan.id}')">
             <div class="plan-card-header">
                 <span class="plan-card-title">${escapeHtml(plan.title)}</span>
-                <span class="status-badge ${plan.status}">${plan.status}</span>
+                <span class="status-badge ${plan.status}" onclick="openStatusDropdown(event, '${plan.id}')">${plan.status}</span>
             </div>
+            ${plan.description ? `<p class="plan-card-description">${escapeHtml(plan.description)}</p>` : ''}
             <div class="plan-card-body">
                 ${plan.files.length > 0 ? `
                     <div class="plan-card-files">
@@ -266,15 +273,14 @@ function renderPlanDetail(plan) {
                         <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </button>
-                <div class="plan-detail-info">
-                    <h2 class="plan-detail-title">${escapeHtml(plan.title)}</h2>
-                    <div class="plan-detail-meta">
-                        <span class="status-badge ${plan.status}">${plan.status}</span>
-                        <span>Created ${formatDate(plan.created_at)}</span>
-                        <span>Updated ${formatDate(plan.updated_at)}</span>
-                    </div>
-                </div>
+                <h2 class="plan-detail-title">${escapeHtml(plan.title)}</h2>
             </div>
+            <div class="plan-detail-meta">
+                <span class="status-badge ${plan.status}" data-plan-id="${plan.id}" onclick="openStatusDropdown(event, '${plan.id}')">${plan.status}</span>
+                <span class="plan-detail-timestamp">Created ${formatDate(plan.created_at)}</span>
+                <span class="plan-detail-timestamp">Updated ${formatDate(plan.updated_at)}</span>
+            </div>
+            ${plan.description ? `<p class="plan-detail-description">${escapeHtml(plan.description)}</p>` : ''}
             <div class="plan-detail-actions">
                 <button class="nav-btn" onclick="openPlanModal('${plan.id}')">Edit Plan</button>
             </div>
@@ -343,53 +349,55 @@ function closeDetail() {
 // --- Plan Modal ---
 function openPlanModal(planId = null) {
     const plan = planId ? plans.find(p => p.id === planId) : null;
-    
+
     document.getElementById('planModalTitle').textContent = plan ? 'Edit Plan' : 'New Plan';
     document.getElementById('planId').value = plan?.id || '';
     document.getElementById('planTitle').value = plan?.title || '';
+    document.getElementById('planDescription').value = plan?.description || '';
     document.getElementById('planStatus').value = plan?.status || 'draft';
-    
+
     // Show status field only for editing
     document.getElementById('statusField').style.display = plan ? 'block' : 'none';
-    
+
     // Show delete button only for editing
     document.getElementById('deletePlanBtn').style.display = plan ? 'block' : 'none';
-    
+
     // Update submit button text
     document.getElementById('savePlanBtn').textContent = plan ? 'Save' : 'Create';
-    
+
     planModal.showModal();
     document.getElementById('planTitle').focus();
 }
 
 async function handlePlanSubmit(e) {
     e.preventDefault();
-    
+
     const planId = document.getElementById('planId').value;
     const title = document.getElementById('planTitle').value.trim();
+    const description = document.getElementById('planDescription').value.trim() || null;
     const status = document.getElementById('planStatus').value;
-    
+
     try {
         if (planId) {
             // Update
             await api(`/api/plans/${planId}`, {
                 method: 'PATCH',
-                body: JSON.stringify({ title, status })
+                body: JSON.stringify({ title, description, status })
             });
             toast('Plan updated', 'success');
         } else {
             // Create
             const newPlan = await api('/api/plans', {
                 method: 'POST',
-                body: JSON.stringify({ title })
+                body: JSON.stringify({ title, description })
             });
             selectedPlanId = newPlan.id;
             toast('Plan created', 'success');
         }
-        
+
         planModal.close();
         await loadPlans();
-        
+
         // Show the new/updated plan
         if (selectedPlanId) {
             const plan = plans.find(p => p.id === selectedPlanId);
@@ -412,45 +420,10 @@ function confirmDeletePlan() {
     confirmModal.showModal();
 }
 
-// --- File Modal ---
+// --- New File ---
 function openFileModal(planId) {
-    document.getElementById('fileModalTitle').textContent = 'New File';
-    document.getElementById('fileOriginalName').value = '';
-    document.getElementById('fileName').value = '';
-    document.getElementById('fileContent').value = '';
-    
-    fileForm.dataset.planId = planId;
-    
-    fileModal.showModal();
-    document.getElementById('fileName').focus();
-}
-
-async function handleFileSubmit(e) {
-    e.preventDefault();
-    
-    const planId = fileForm.dataset.planId;
-    const name = document.getElementById('fileName').value.trim();
-    const content = document.getElementById('fileContent').value;
-    
-    if (!name) {
-        toast('Filename is required', 'error');
-        return;
-    }
-    
-    try {
-        await api(`/api/plans/${planId}/files`, {
-            method: 'POST',
-            body: JSON.stringify({ name, content })
-        });
-        
-        fileModal.close();
-        
-        // Navigate to the new document
-        window.location.href = `/doc/${planId}/${encodeURIComponent(name)}`;
-        
-    } catch (err) {
-        toast(err.message, 'error');
-    }
+    // Navigate to the new file editor page instead of opening a modal
+    window.location.href = `/doc/${planId}/new`;
 }
 
 // --- Delete Actions ---
@@ -514,8 +487,78 @@ function toast(message, type = 'info') {
     }, 3000);
 }
 
+// --- Status Dropdown ---
+let activeStatusDropdown = null;
+
+function openStatusDropdown(event, planId) {
+    event.stopPropagation();
+
+    // Close any existing dropdown
+    closeStatusDropdown();
+
+    const badge = event.target.closest('.status-badge');
+    const currentStatus = badge.textContent.trim();
+
+    // Create dropdown
+    const dropdown = document.createElement('div');
+    dropdown.className = 'status-dropdown';
+    dropdown.innerHTML = `
+        <button class="status-option draft ${currentStatus === 'draft' ? 'active' : ''}" data-status="draft">Draft</button>
+        <button class="status-option ready ${currentStatus === 'ready' ? 'active' : ''}" data-status="ready">Ready</button>
+        <button class="status-option approved ${currentStatus === 'approved' ? 'active' : ''}" data-status="approved">Approved</button>
+    `;
+
+    // Position dropdown
+    const rect = badge.getBoundingClientRect();
+    dropdown.style.position = 'fixed';
+    dropdown.style.top = `${rect.bottom + 4}px`;
+    dropdown.style.left = `${rect.left}px`;
+    dropdown.style.zIndex = '1000';
+
+    // Handle option clicks
+    dropdown.querySelectorAll('.status-option').forEach(option => {
+        option.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const newStatus = option.dataset.status;
+            if (newStatus !== currentStatus) {
+                await updatePlanStatus(planId, newStatus);
+            }
+            closeStatusDropdown();
+        });
+    });
+
+    document.body.appendChild(dropdown);
+    activeStatusDropdown = dropdown;
+
+    // Close on outside click
+    setTimeout(() => {
+        document.addEventListener('click', closeStatusDropdown, { once: true });
+    }, 0);
+}
+
+function closeStatusDropdown() {
+    if (activeStatusDropdown) {
+        activeStatusDropdown.remove();
+        activeStatusDropdown = null;
+    }
+}
+
+async function updatePlanStatus(planId, newStatus) {
+    try {
+        await api(`/api/plans/${planId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: newStatus })
+        });
+        toast('Status updated', 'success');
+        await loadPlans();
+    } catch (err) {
+        toast(err.message, 'error');
+    }
+}
+
 // --- Global functions for onclick handlers ---
 window.selectPlan = selectPlan;
 window.openPlanModal = openPlanModal;
 window.openFileModal = openFileModal;
 window.closeDetail = closeDetail;
+window.openStatusDropdown = openStatusDropdown;

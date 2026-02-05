@@ -374,6 +374,7 @@ async def create_plan(
     files = [{"name": f.name, "content": f.content} for f in plan_data.files] if plan_data.files else None
     plan = storage.create_plan(
         title=plan_data.title,
+        description=plan_data.description,
         files=files,
     )
     logger.info(f"Created plan: {plan.id} - {plan.title}")
@@ -424,12 +425,13 @@ async def update_plan(
     plan_data: PlanUpdate,
     _: str = Depends(verify_token),
 ):
-    """Update a plan's title or status."""
+    """Update a plan's title, description, or status."""
     storage = get_storage()
-    
+
     plan = storage.update_plan(
         plan_id,
         title=plan_data.title,
+        description=plan_data.description,
         status=plan_data.status,
     )
     if not plan:
@@ -680,6 +682,19 @@ async def serve_plans():
             headers={"Cache-Control": "no-cache, must-revalidate"}
         )
     raise HTTPException(status_code=404, detail="Plans page not found")
+
+
+@app.get("/doc/{plan_id}/new")
+async def serve_new_document(plan_id: str):
+    """Serve the document viewer page for new file creation."""
+    doc_path = frontend_path / "document.html"
+    if doc_path.exists():
+        return FileResponse(
+            doc_path,
+            media_type="text/html",
+            headers={"Cache-Control": "no-cache, must-revalidate"}
+        )
+    raise HTTPException(status_code=404, detail="Document viewer not found")
 
 
 @app.get("/doc/{plan_id}/{filename:path}")
