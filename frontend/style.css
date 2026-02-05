@@ -80,6 +80,38 @@ header:first-of-type {
     font-weight: 600;
     letter-spacing: -0.02em;
     color: var(--text);
+    text-decoration: none;
+}
+
+.logo:hover {
+    color: var(--text);
+}
+
+/* Main navigation tabs */
+.main-nav {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: 2rem;
+}
+
+.nav-link {
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-2);
+    text-decoration: none;
+    transition: color 0.15s, background 0.15s;
+}
+
+.nav-link:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+}
+
+.nav-link.active {
+    background: var(--bg-hover);
+    color: var(--text);
 }
 
 .blaze-mark {

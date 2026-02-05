@@ -669,6 +669,32 @@ async def serve_index():
     return {"message": "Frontend not found. API is running at /api/"}
 
 
+@app.get("/plans")
+async def serve_plans():
+    """Serve the plans page."""
+    plans_path = frontend_path / "plans.html"
+    if plans_path.exists():
+        return FileResponse(
+            plans_path,
+            media_type="text/html",
+            headers={"Cache-Control": "no-cache, must-revalidate"}
+        )
+    raise HTTPException(status_code=404, detail="Plans page not found")
+
+
+@app.get("/doc/{plan_id}/{filename:path}")
+async def serve_document(plan_id: str, filename: str):
+    """Serve the document viewer page."""
+    doc_path = frontend_path / "document.html"
+    if doc_path.exists():
+        return FileResponse(
+            doc_path,
+            media_type="text/html",
+            headers={"Cache-Control": "no-cache, must-revalidate"}
+        )
+    raise HTTPException(status_code=404, detail="Document viewer not found")
+
+
 @app.get("/sw.js")
 async def serve_service_worker():
     """Serve service worker from root for proper scope."""
