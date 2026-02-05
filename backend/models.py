@@ -78,3 +78,62 @@ class Board(BaseModel):
     """Full board state."""
     columns: dict[str, list[Card]]
     stats: BoardStats
+
+
+class PlanStatus(str, Enum):
+    """Plan status levels.
+    
+    - draft: Plan is being written, incomplete thoughts
+    - ready: Plan is complete, waiting for review
+    - approved: Signed off, ready for implementation
+    """
+    DRAFT = "draft"
+    READY = "ready"
+    APPROVED = "approved"
+
+
+class PlanFile(BaseModel):
+    """A file within a plan (markdown document)."""
+    name: str = Field(..., min_length=1, max_length=100, description="Filename (e.g., 'overview.md')")
+    content: str = Field(default="", max_length=50000, description="File content (markdown)")
+
+
+class PlanFileCreate(BaseModel):
+    """Fields for creating a new file in a plan."""
+    name: str = Field(..., min_length=1, max_length=100)
+    content: str = Field(default="")
+
+
+class PlanFileUpdate(BaseModel):
+    """Fields for updating a plan file."""
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    content: Optional[str] = None
+
+
+class PlanCreate(BaseModel):
+    """Fields for creating a new plan."""
+    title: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=2000)
+    files: list[PlanFileCreate] = Field(default_factory=list, description="Initial files (optional)")
+
+
+class PlanUpdate(BaseModel):
+    """Fields for updating an existing plan (all optional)."""
+    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=2000)
+    status: Optional[PlanStatus] = None
+
+
+class Plan(BaseModel):
+    """Full plan model with all fields."""
+    id: str
+    title: str
+    description: Optional[str] = None
+    status: PlanStatus = PlanStatus.DRAFT
+    files: list[PlanFile] = Field(default_factory=list)
+    created_at: datetime
+    updated_at: datetime
+    position: int = 0
+
+    class Config:
+        from_attributes = True

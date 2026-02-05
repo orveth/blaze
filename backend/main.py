@@ -20,6 +20,13 @@ from .models import (
     CardMove,
     CardUpdate,
     Column,
+    Plan,
+    PlanCreate,
+    PlanUpdate,
+    PlanStatus,
+    PlanFile,
+    PlanFileCreate,
+    PlanFileUpdate,
 )
 from .storage import get_storage
 
@@ -354,6 +361,220 @@ async def archive_column(
     return {"archived_count": count}
 
 
+# --- Plan Endpoints ---
+
+
+@app.post("/api/plans", response_model=Plan, status_code=status.HTTP_201_CREATED)
+async def create_plan(
+    plan_data: PlanCreate,
+    _: str = Depends(verify_token),
+):
+    """Create a new plan."""
+    storage = get_storage()
+    files = [{"name": f.name, "content": f.content} for f in plan_data.files] if plan_data.files else None
+    plan = storage.create_plan(
+        title=plan_data.title,
+        description=plan_data.description,
+        files=files,
+    )
+    logger.info(f"Created plan: {plan.id} - {plan.title}")
+    return plan
+
+
+@app.get("/api/plans", response_model=list[Plan])
+async def list_plans(
+    status_filter: str | None = None,
+    _: str = Depends(verify_token),
+):
+    """List all plans, optionally filtered by status."""
+    storage = get_storage()
+    
+    plan_status = None
+    if status_filter:
+        try:
+            plan_status = PlanStatus(status_filter)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid status: {status_filter}",
+            )
+    
+    plans = storage.list_plans(status=plan_status)
+    return plans
+
+
+@app.get("/api/plans/{plan_id}", response_model=Plan)
+async def get_plan(
+    plan_id: str,
+    _: str = Depends(verify_token),
+):
+    """Get a specific plan by ID."""
+    storage = get_storage()
+    plan = storage.get_plan(plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {plan_id} not found",
+        )
+    return plan
+
+
+@app.patch("/api/plans/{plan_id}", response_model=Plan)
+async def update_plan(
+    plan_id: str,
+    plan_data: PlanUpdate,
+    _: str = Depends(verify_token),
+):
+    """Update a plan's title, description, or status."""
+    storage = get_storage()
+
+    plan = storage.update_plan(
+        plan_id,
+        title=plan_data.title,
+        description=plan_data.description,
+        status=plan_data.status,
+    )
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {plan_id} not found",
+        )
+    logger.info(f"Updated plan: {plan_id}")
+    return plan
+
+
+@app.delete("/api/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_plan(
+    plan_id: str,
+    _: str = Depends(verify_token),
+):
+    """Delete a plan."""
+    storage = get_storage()
+    if not storage.delete_plan(plan_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {plan_id} not found",
+        )
+    logger.info(f"Deleted plan: {plan_id}")
+    return None
+
+
+# --- Plan File Endpoints ---
+
+
+@app.post("/api/plans/{plan_id}/files", response_model=Plan, status_code=status.HTTP_201_CREATED)
+async def add_plan_file(
+    plan_id: str,
+    file_data: PlanFileCreate,
+    _: str = Depends(verify_token),
+):
+    """Add a file to a plan."""
+    storage = get_storage()
+    
+    # Check plan exists first
+    plan = storage.get_plan(plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {plan_id} not found",
+        )
+    
+    result = storage.add_plan_file(plan_id, name=file_data.name, content=file_data.content)
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"File '{file_data.name}' already exists in plan",
+        )
+    logger.info(f"Added file '{file_data.name}' to plan {plan_id}")
+    return result
+
+
+@app.get("/api/plans/{plan_id}/files/{filename}", response_model=PlanFile)
+async def get_plan_file(
+    plan_id: str,
+    filename: str,
+    _: str = Depends(verify_token),
+):
+    """Get a specific file from a plan."""
+    storage = get_storage()
+    
+    # Check plan exists first
+    plan = storage.get_plan(plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {plan_id} not found",
+        )
+    
+    file = storage.get_plan_file(plan_id, filename)
+    if not file:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"File '{filename}' not found in plan",
+        )
+    return file
+
+
+@app.patch("/api/plans/{plan_id}/files/{filename}", response_model=Plan)
+async def update_plan_file(
+    plan_id: str,
+    filename: str,
+    file_data: PlanFileUpdate,
+    _: str = Depends(verify_token),
+):
+    """Update a file within a plan."""
+    storage = get_storage()
+    
+    # Check plan exists first
+    plan = storage.get_plan(plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {plan_id} not found",
+        )
+    
+    result = storage.update_plan_file(
+        plan_id,
+        filename,
+        name=file_data.name,
+        content=file_data.content,
+    )
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"File '{filename}' not found in plan",
+        )
+    logger.info(f"Updated file '{filename}' in plan {plan_id}")
+    return result
+
+
+@app.delete("/api/plans/{plan_id}/files/{filename}", response_model=Plan)
+async def delete_plan_file(
+    plan_id: str,
+    filename: str,
+    _: str = Depends(verify_token),
+):
+    """Delete a file from a plan."""
+    storage = get_storage()
+    
+    # Check plan exists first
+    plan = storage.get_plan(plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {plan_id} not found",
+        )
+    
+    result = storage.delete_plan_file(plan_id, filename)
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"File '{filename}' not found in plan",
+        )
+    logger.info(f"Deleted file '{filename}' from plan {plan_id}")
+    return result
+
+
 # --- Board Endpoints ---
 
 
@@ -448,6 +669,45 @@ async def serve_index():
             headers={"Cache-Control": "no-cache, must-revalidate"}
         )
     return {"message": "Frontend not found. API is running at /api/"}
+
+
+@app.get("/plans")
+async def serve_plans():
+    """Serve the plans page."""
+    plans_path = frontend_path / "plans.html"
+    if plans_path.exists():
+        return FileResponse(
+            plans_path,
+            media_type="text/html",
+            headers={"Cache-Control": "no-cache, must-revalidate"}
+        )
+    raise HTTPException(status_code=404, detail="Plans page not found")
+
+
+@app.get("/doc/{plan_id}/new")
+async def serve_new_document(plan_id: str):
+    """Serve the document viewer page for new file creation."""
+    doc_path = frontend_path / "document.html"
+    if doc_path.exists():
+        return FileResponse(
+            doc_path,
+            media_type="text/html",
+            headers={"Cache-Control": "no-cache, must-revalidate"}
+        )
+    raise HTTPException(status_code=404, detail="Document viewer not found")
+
+
+@app.get("/doc/{plan_id}/{filename:path}")
+async def serve_document(plan_id: str, filename: str):
+    """Serve the document viewer page."""
+    doc_path = frontend_path / "document.html"
+    if doc_path.exists():
+        return FileResponse(
+            doc_path,
+            media_type="text/html",
+            headers={"Cache-Control": "no-cache, must-revalidate"}
+        )
+    raise HTTPException(status_code=404, detail="Document viewer not found")
 
 
 @app.get("/sw.js")

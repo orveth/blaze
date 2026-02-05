@@ -142,3 +142,89 @@ pub struct BoardStats {
 pub struct HealthResponse {
     pub status: String,
 }
+
+// --- Plan types ---
+
+/// Plan status levels
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ValueEnum)]
+#[serde(rename_all = "lowercase")]
+pub enum PlanStatus {
+    Draft,
+    Ready,
+    Approved,
+}
+
+impl fmt::Display for PlanStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PlanStatus::Draft => write!(f, "draft"),
+            PlanStatus::Ready => write!(f, "ready"),
+            PlanStatus::Approved => write!(f, "approved"),
+        }
+    }
+}
+
+impl PlanStatus {
+    /// Get status emoji
+    pub fn emoji(&self) -> &'static str {
+        match self {
+            PlanStatus::Draft => "📝",
+            PlanStatus::Ready => "👀",
+            PlanStatus::Approved => "✅",
+        }
+    }
+}
+
+/// A file within a plan
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlanFile {
+    pub name: String,
+    pub content: String,
+}
+
+/// Full plan model
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Plan {
+    pub id: String,
+    pub title: String,
+    pub status: PlanStatus,
+    pub files: Vec<PlanFile>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    #[serde(default)]
+    pub position: i32,
+}
+
+/// Request body for creating a plan
+#[derive(Debug, Serialize)]
+pub struct PlanCreate {
+    pub title: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub files: Vec<PlanFileCreate>,
+}
+
+/// Request body for creating a file in a plan
+#[derive(Debug, Serialize)]
+pub struct PlanFileCreate {
+    pub name: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub content: String,
+}
+
+/// Request body for updating a plan
+#[derive(Debug, Default, Serialize)]
+pub struct PlanUpdate {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<PlanStatus>,
+}
+
+/// Request body for updating a plan file
+#[derive(Debug, Default, Serialize)]
+pub struct PlanFileUpdate {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
+}

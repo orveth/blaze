@@ -10,8 +10,8 @@ mod output;
 mod types;
 
 use clap::{Parser, Subcommand};
-use commands::{add, board, edit, list, move_card, ping, rm, show, stats};
-use types::{Column, Priority};
+use commands::{add, board, edit, list, move_card, ping, plan, rm, show, stats};
+use types::{Column, PlanStatus, Priority};
 
 #[derive(Parser)]
 #[command(name = "blaze")]
@@ -154,6 +154,115 @@ enum Commands {
         #[arg(short, long)]
         force: bool,
     },
+
+    /// Plan management
+    Plan {
+        #[command(subcommand)]
+        action: PlanCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum PlanCommands {
+    /// List plans
+    List {
+        /// Filter by status
+        #[arg(short, long)]
+        status: Option<PlanStatus>,
+    },
+
+    /// Show plan details
+    Show {
+        /// Plan ID
+        plan_id: String,
+    },
+
+    /// Create a new plan
+    Add {
+        /// Plan title
+        title: String,
+
+        /// Initial file to create (e.g., "overview.md")
+        #[arg(short, long)]
+        file: Option<String>,
+    },
+
+    /// Update a plan
+    Edit {
+        /// Plan ID
+        plan_id: String,
+
+        /// New title
+        #[arg(long)]
+        title: Option<String>,
+
+        /// Set status (draft, ready, approved)
+        #[arg(short, long)]
+        status: Option<PlanStatus>,
+    },
+
+    /// Delete a plan
+    Rm {
+        /// Plan ID
+        plan_id: String,
+
+        /// Skip confirmation prompt
+        #[arg(short, long)]
+        force: bool,
+    },
+
+    /// File operations within a plan
+    File {
+        #[command(subcommand)]
+        action: PlanFileCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum PlanFileCommands {
+    /// Add a file to a plan
+    Add {
+        /// Plan ID
+        plan_id: String,
+
+        /// Filename (e.g., "overview.md")
+        filename: String,
+    },
+
+    /// Show a file's content
+    Show {
+        /// Plan ID
+        plan_id: String,
+
+        /// Filename
+        filename: String,
+    },
+
+    /// Update a file
+    Edit {
+        /// Plan ID
+        plan_id: String,
+
+        /// Filename
+        filename: String,
+
+        /// Rename the file
+        #[arg(long)]
+        name: Option<String>,
+
+        /// Set content (reads from stdin if not provided)
+        #[arg(long)]
+        content: Option<String>,
+    },
+
+    /// Remove a file from a plan
+    Rm {
+        /// Plan ID
+        plan_id: String,
+
+        /// Filename
+        filename: String,
+    },
 }
 
 #[tokio::main]
@@ -268,6 +377,38 @@ async fn run() -> error::Result<()> {
         Commands::Rm { card_id, force } => {
             let client = client::Client::new(&url, token)?;
             rm::run(&client, &card_id, force).await
+        }
+
+        Commands::Plan { action } => {
+            let client = client::Client::new(&url, token)?;
+            match action {
+                PlanCommands::List { status } => plan::list(&client, status).await,
+                PlanCommands::Show { plan_id } => plan::show(&client, &plan_id).await,
+                PlanCommands::Add { title, file } => plan::add(&client, title, file).await,
+                PlanCommands::Edit {
+                    plan_id,
+                    title,
+                    status,
+                } => plan::edit(&client, &plan_id, title, status).await,
+                PlanCommands::Rm { plan_id, force } => plan::rm(&client, &plan_id, force).await,
+                PlanCommands::File { action } => match action {
+                    PlanFileCommands::Add { plan_id, filename } => {
+                        plan::file_add(&client, &plan_id, &filename).await
+                    }
+                    PlanFileCommands::Show { plan_id, filename } => {
+                        plan::file_show(&client, &plan_id, &filename).await
+                    }
+                    PlanFileCommands::Edit {
+                        plan_id,
+                        filename,
+                        name,
+                        content,
+                    } => plan::file_edit(&client, &plan_id, &filename, name, content).await,
+                    PlanFileCommands::Rm { plan_id, filename } => {
+                        plan::file_rm(&client, &plan_id, &filename).await
+                    }
+                },
+            }
         }
     }
 }

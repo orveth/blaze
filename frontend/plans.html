@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f0f0e">
+    <meta name="color-scheme" content="dark">
+    
+    <title>Plans — Blaze</title>
+    
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/plans.css">
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <a href="/" class="logo">
+                <svg class="blaze-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M12 3L12 21M7 8L12 3L17 8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Blaze
+            </a>
+        </div>
+        <nav class="main-nav">
+            <a href="/" class="nav-link">Board</a>
+            <a href="/plans" class="nav-link active">Plans</a>
+        </nav>
+        <nav>
+            <button class="nav-btn primary" id="newPlanBtn">+ New Plan</button>
+            <button class="nav-btn" id="logoutBtn" title="Logout">Logout</button>
+        </nav>
+    </header>
+    
+    <!-- Filter Bar -->
+    <nav class="filter-bar plans-filter" aria-label="Filter plans">
+        <div class="filter-group">
+            <span class="filter-label" id="statusFilterLabel">Status</span>
+            <div class="filter-chips" role="group" aria-labelledby="statusFilterLabel">
+                <label class="filter-chip" data-status="draft">
+                    <input type="checkbox" value="draft" data-filter="status">
+                    <span>Draft</span>
+                </label>
+                <label class="filter-chip" data-status="ready">
+                    <input type="checkbox" value="ready" data-filter="status">
+                    <span>Ready</span>
+                </label>
+                <label class="filter-chip" data-status="approved">
+                    <input type="checkbox" value="approved" data-filter="status">
+                    <span>Approved</span>
+                </label>
+            </div>
+        </div>
+    </nav>
+
+    <main class="plans-main">
+        <!-- Plans Grid -->
+        <section class="plans-grid-container" aria-label="Plans list">
+            <header class="plans-grid-header">
+                <h2 id="plansCount">Plans</h2>
+            </header>
+            <div class="plans-grid" id="plansGrid" role="list">
+                <div class="loading">Loading plans...</div>
+            </div>
+        </section>
+
+        <!-- Plan Detail Panel (slides in) -->
+        <div class="plan-detail-overlay" id="detailOverlay" aria-hidden="true"></div>
+        <aside class="plan-detail" id="planDetail" aria-label="Plan details">
+            <!-- Populated by JS -->
+        </aside>
+    </main>
+
+    <!-- Login Modal -->
+    <dialog id="loginModal">
+        <div class="modal-content">
+            <h3>Sign in</h3>
+            <form id="loginForm">
+                <input type="password" id="password" name="password" required autofocus placeholder="Token">
+                <button type="submit">Continue</button>
+            </form>
+        </div>
+    </dialog>
+
+    <!-- New/Edit Plan Modal -->
+    <dialog id="planModal">
+        <div class="modal-content">
+            <header class="modal-header">
+                <h3 id="planModalTitle">New Plan</h3>
+                <button type="button" class="close-btn" aria-label="Close">&times;</button>
+            </header>
+            <form id="planForm">
+                <input type="hidden" id="planId" name="planId">
+
+                <div class="field">
+                    <label for="planTitle">Title</label>
+                    <input type="text" id="planTitle" name="title" required maxlength="200" placeholder="Plan title">
+                </div>
+
+                <div class="field">
+                    <label for="planDescription">Description <span class="field-optional">(optional)</span></label>
+                    <textarea id="planDescription" name="description" maxlength="2000" rows="3" placeholder="Brief summary of this plan..."></textarea>
+                </div>
+
+                <div class="field" id="statusField" style="display: none;">
+                    <label for="planStatus">Status</label>
+                    <select id="planStatus" name="status">
+                        <option value="draft">Draft</option>
+                        <option value="ready">Ready</option>
+                        <option value="approved">Approved</option>
+                    </select>
+                </div>
+
+                <footer class="modal-footer">
+                    <button type="button" class="btn-ghost" id="deletePlanBtn" style="display: none;">Delete</button>
+                    <div class="spacer"></div>
+                    <button type="button" class="btn-ghost" id="cancelPlanBtn">Cancel</button>
+                    <button type="submit" id="savePlanBtn">Create</button>
+                </footer>
+            </form>
+        </div>
+    </dialog>
+
+    <!-- New File Modal -->
+    <dialog id="fileModal">
+        <div class="modal-content modal-lg">
+            <header class="modal-header">
+                <h3 id="fileModalTitle">New File</h3>
+                <button type="button" class="close-btn" aria-label="Close">&times;</button>
+            </header>
+            <form id="fileForm">
+                <input type="hidden" id="fileOriginalName" name="originalName">
+                
+                <div class="field">
+                    <label for="fileName">Filename</label>
+                    <input type="text" id="fileName" name="name" required maxlength="100" placeholder="overview.md">
+                </div>
+                
+                <div class="field field-grow">
+                    <label for="fileContent">Content (optional)</label>
+                    <textarea id="fileContent" name="content" rows="10" placeholder="# Title&#10;&#10;Start writing..."></textarea>
+                </div>
+                
+                <footer class="modal-footer">
+                    <button type="button" class="btn-ghost" id="cancelFileBtn">Cancel</button>
+                    <button type="submit" id="saveFileBtn">Create & Open</button>
+                </footer>
+            </form>
+        </div>
+    </dialog>
+
+    <!-- Confirm Delete Modal -->
+    <dialog id="confirmModal">
+        <div class="modal-content modal-sm">
+            <p id="confirmText">Delete this? This can't be undone.</p>
+            <footer class="modal-footer">
+                <button class="btn-ghost" id="confirmCancel">Cancel</button>
+                <button class="btn-danger" id="confirmDelete">Delete</button>
+            </footer>
+        </div>
+    </dialog>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/static/plans.js"></script>
+</body>
+</html>

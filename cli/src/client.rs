@@ -192,4 +192,76 @@ impl Client {
     pub async fn stats(&self) -> Result<BoardStats> {
         self.get("/api/board/stats").await
     }
+
+    // --- Plan Methods ---
+
+    /// List all plans
+    pub async fn list_plans(&self, status: Option<PlanStatus>) -> Result<Vec<Plan>> {
+        let path = match status {
+            Some(s) => format!("/api/plans?status={}", s),
+            None => "/api/plans".to_string(),
+        };
+        self.get(&path).await
+    }
+
+    /// Get a single plan
+    pub async fn get_plan(&self, id: &str) -> Result<Plan> {
+        self.get(&format!("/api/plans/{}", id)).await
+    }
+
+    /// Create a new plan
+    #[allow(dead_code)]
+    pub async fn create_plan(&self, plan: &PlanCreate) -> Result<Plan> {
+        self.post("/api/plans", plan).await
+    }
+
+    /// Update a plan
+    #[allow(dead_code)]
+    pub async fn update_plan(&self, id: &str, update: &PlanUpdate) -> Result<Plan> {
+        self.patch(&format!("/api/plans/{}", id), update).await
+    }
+
+    /// Delete a plan
+    #[allow(dead_code)]
+    pub async fn delete_plan(&self, id: &str) -> Result<()> {
+        self.delete(&format!("/api/plans/{}", id)).await
+    }
+
+    /// Add a file to a plan
+    #[allow(dead_code)]
+    pub async fn add_plan_file(&self, plan_id: &str, file: &PlanFileCreate) -> Result<Plan> {
+        self.post(&format!("/api/plans/{}/files", plan_id), file).await
+    }
+
+    /// Get a file from a plan
+    pub async fn get_plan_file(&self, plan_id: &str, filename: &str) -> Result<PlanFile> {
+        self.get(&format!("/api/plans/{}/files/{}", plan_id, filename)).await
+    }
+
+    /// Update a file in a plan
+    #[allow(dead_code)]
+    pub async fn update_plan_file(&self, plan_id: &str, filename: &str, update: &PlanFileUpdate) -> Result<Plan> {
+        self.patch(&format!("/api/plans/{}/files/{}", plan_id, filename), update).await
+    }
+
+    /// Delete a file from a plan
+    #[allow(dead_code)]
+    pub async fn delete_plan_file(&self, plan_id: &str, filename: &str) -> Result<Plan> {
+        self.delete_with_response(&format!("/api/plans/{}/files/{}", plan_id, filename)).await
+    }
+}
+
+impl Client {
+    /// Make a DELETE request that returns a response body
+    async fn delete_with_response<T: DeserializeOwned>(&self, path: &str) -> Result<T> {
+        let url = format!("{}{}", self.base_url, path);
+        let resp = self
+            .http
+            .delete(&url)
+            .headers(self.headers())
+            .send()
+            .await?;
+
+        self.handle_response(resp).await
+    }
 }

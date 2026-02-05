@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from .models import Card, Column, Priority
+from .models import Card, Column, Priority, Plan, PlanStatus, PlanFile
 from .utils import generate_id, now_utc
 
 
@@ -28,6 +28,7 @@ class Storage:
             default_data = {
                 "cards": {},
                 "column_order": {col.value: [] for col in Column},
+                "plans": {},
             }
             self._write_data(default_data)
 
@@ -79,6 +80,40 @@ class Storage:
             updated_at=datetime.fromisoformat(data["updated_at"]),
             position=data.get("position", 0),
             archived=data.get("archived", False),
+        )
+
+    def _plan_to_dict(self, plan: Plan) -> dict:
+        """Convert Plan model to dict for storage."""
+        return {
+            "id": plan.id,
+            "title": plan.title,
+            "description": plan.description,
+            "status": plan.status.value,
+            "files": [{"name": f.name, "content": f.content} for f in plan.files],
+            "created_at": plan.created_at.isoformat(),
+            "updated_at": plan.updated_at.isoformat(),
+            "position": plan.position,
+        }
+
+    def _dict_to_plan(self, data: dict) -> Plan:
+        """Convert stored dict to Plan model."""
+        # Handle migration from old description-based format
+        files_data = data.get("files", [])
+        if not files_data and data.get("description"):
+            # Migrate old single description to files format
+            files_data = [{"name": "plan.md", "content": data["description"]}]
+
+        files = [PlanFile(name=f["name"], content=f["content"]) for f in files_data]
+
+        return Plan(
+            id=data["id"],
+            title=data["title"],
+            description=data.get("description"),
+            status=PlanStatus(data.get("status", "draft")),
+            files=files,
+            created_at=datetime.fromisoformat(data["created_at"]),
+            updated_at=datetime.fromisoformat(data["updated_at"]),
+            position=data.get("position", 0),
         )
 
     def list_cards(self, column: Optional[Column] = None, include_archived: bool = False) -> list[Card]:
@@ -222,6 +257,200 @@ class Storage:
         if card_id in data["column_order"].get(card_column, []):
             data["column_order"][card_column].remove(card_id)
         
+        self._write_data(data)
+        return True
+
+    # Plan methods
+
+    def create_plan(self, title: str, description: str | None = None, files: list[dict] | None = None) -> Plan:
+        """Create a new plan.
+
+        Args:
+            title: Plan title
+            description: Optional plan description
+            files: Optional list of {"name": str, "content": str} dicts
+        """
+        data = self._read_data()
+
+        # Ensure plans key exists
+        if "plans" not in data:
+            data["plans"] = {}
+
+        plan_id = generate_id()
+        now = now_utc()
+
+        plan_files = []
+        if files:
+            plan_files = [PlanFile(name=f["name"], content=f.get("content", "")) for f in files]
+
+        plan = Plan(
+            id=plan_id,
+            title=title,
+            description=description,
+            status=PlanStatus.DRAFT,
+            files=plan_files,
+            created_at=now,
+            updated_at=now,
+            position=len(data["plans"]),
+        )
+
+        data["plans"][plan_id] = self._plan_to_dict(plan)
+        self._write_data(data)
+        return plan
+
+    def get_plan(self, plan_id: str) -> Optional[Plan]:
+        """Get a plan by ID."""
+        data = self._read_data()
+        
+        if "plans" not in data:
+            return None
+        
+        plan_data = data["plans"].get(plan_id)
+        return self._dict_to_plan(plan_data) if plan_data else None
+
+    def list_plans(self, status: Optional[PlanStatus] = None) -> list[Plan]:
+        """List all plans, optionally filtered by status."""
+        data = self._read_data()
+        
+        if "plans" not in data:
+            return []
+        
+        plans = [self._dict_to_plan(p) for p in data["plans"].values()]
+        
+        if status:
+            plans = [p for p in plans if p.status == status]
+        
+        # Sort by position
+        return sorted(plans, key=lambda p: p.position)
+
+    def update_plan(
+        self,
+        plan_id: str,
+        title: Optional[str] = None,
+        description: Optional[str] = None,
+        status: Optional[PlanStatus] = None,
+    ) -> Optional[Plan]:
+        """Update a plan's title, description, or status."""
+        data = self._read_data()
+
+        if "plans" not in data or plan_id not in data["plans"]:
+            return None
+
+        plan_data = data["plans"][plan_id]
+
+        if title is not None:
+            plan_data["title"] = title
+        if description is not None:
+            plan_data["description"] = description
+        if status is not None:
+            plan_data["status"] = status.value
+
+        plan_data["updated_at"] = now_utc().isoformat()
+
+        self._write_data(data)
+        return self._dict_to_plan(plan_data)
+
+    def add_plan_file(self, plan_id: str, name: str, content: str = "") -> Optional[Plan]:
+        """Add a file to a plan."""
+        data = self._read_data()
+        
+        if "plans" not in data or plan_id not in data["plans"]:
+            return None
+        
+        plan_data = data["plans"][plan_id]
+        
+        # Ensure files array exists
+        if "files" not in plan_data:
+            plan_data["files"] = []
+        
+        # Check for duplicate filename
+        for f in plan_data["files"]:
+            if f["name"] == name:
+                return None  # File already exists
+        
+        plan_data["files"].append({"name": name, "content": content})
+        plan_data["updated_at"] = now_utc().isoformat()
+        
+        self._write_data(data)
+        return self._dict_to_plan(plan_data)
+
+    def update_plan_file(
+        self, plan_id: str, filename: str, name: Optional[str] = None, content: Optional[str] = None
+    ) -> Optional[Plan]:
+        """Update a file within a plan."""
+        data = self._read_data()
+        
+        if "plans" not in data or plan_id not in data["plans"]:
+            return None
+        
+        plan_data = data["plans"][plan_id]
+        files = plan_data.get("files", [])
+        
+        # Find the file
+        file_found = False
+        for f in files:
+            if f["name"] == filename:
+                if name is not None:
+                    f["name"] = name
+                if content is not None:
+                    f["content"] = content
+                file_found = True
+                break
+        
+        if not file_found:
+            return None
+        
+        plan_data["updated_at"] = now_utc().isoformat()
+        
+        self._write_data(data)
+        return self._dict_to_plan(plan_data)
+
+    def delete_plan_file(self, plan_id: str, filename: str) -> Optional[Plan]:
+        """Delete a file from a plan."""
+        data = self._read_data()
+        
+        if "plans" not in data or plan_id not in data["plans"]:
+            return None
+        
+        plan_data = data["plans"][plan_id]
+        files = plan_data.get("files", [])
+        
+        # Find and remove the file
+        original_len = len(files)
+        plan_data["files"] = [f for f in files if f["name"] != filename]
+        
+        if len(plan_data["files"]) == original_len:
+            return None  # File not found
+        
+        plan_data["updated_at"] = now_utc().isoformat()
+        
+        self._write_data(data)
+        return self._dict_to_plan(plan_data)
+
+    def get_plan_file(self, plan_id: str, filename: str) -> Optional[PlanFile]:
+        """Get a specific file from a plan."""
+        data = self._read_data()
+        
+        if "plans" not in data or plan_id not in data["plans"]:
+            return None
+        
+        plan_data = data["plans"][plan_id]
+        files = plan_data.get("files", [])
+        
+        for f in files:
+            if f["name"] == filename:
+                return PlanFile(name=f["name"], content=f["content"])
+        
+        return None
+
+    def delete_plan(self, plan_id: str) -> bool:
+        """Delete a plan."""
+        data = self._read_data()
+        
+        if "plans" not in data or plan_id not in data["plans"]:
+            return False
+        
+        del data["plans"][plan_id]
         self._write_data(data)
         return True
 
