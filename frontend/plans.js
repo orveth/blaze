@@ -266,42 +266,38 @@ async function selectPlan(planId) {
 
 function renderPlanDetail(plan) {
     planDetail.innerHTML = `
-        <header class="plan-detail-header">
-            <div class="plan-detail-top">
-                <button class="plan-detail-close" onclick="closeDetail()" aria-label="Close">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+        <header class="sidebar-header">
+            <button class="sidebar-close" onclick="closeDetail()" aria-label="Close">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <div class="sidebar-title-row">
+                <h2 class="sidebar-title">${escapeHtml(plan.title)}</h2>
+                <button class="icon-btn" onclick="openPlanModal('${plan.id}')" aria-label="Edit plan" title="Edit plan">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </button>
-                <h2 class="plan-detail-title">${escapeHtml(plan.title)}</h2>
             </div>
-            <div class="plan-detail-meta">
+            <div class="sidebar-meta">
                 <span class="status-badge ${plan.status}" data-plan-id="${plan.id}" onclick="openStatusDropdown(event, '${plan.id}')">${plan.status}</span>
-                <span class="meta-separator">·</span>
-                <span class="plan-detail-timestamp">Created ${formatDate(plan.created_at)}</span>
-                <span class="meta-separator">·</span>
-                <span class="plan-detail-timestamp">Updated ${formatDate(plan.updated_at)}</span>
+                <span class="sidebar-timestamp">Created ${formatDate(plan.created_at)}</span>
+                <span class="sidebar-timestamp">Updated ${formatDate(plan.updated_at)}</span>
             </div>
-            ${plan.description ? `<p class="plan-detail-description">${escapeHtml(plan.description)}</p>` : ''}
+            ${plan.description ? `<p class="sidebar-description">${escapeHtml(plan.description)}</p>` : ''}
         </header>
         
-        <div class="plan-detail-files">
-            <div class="files-section-header">
-                <h3>Files</h3>
-                <div class="files-header-actions">
-                    <button class="icon-btn" onclick="openPlanModal('${plan.id}')" aria-label="Edit plan" title="Edit plan">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
-                    <button class="icon-btn" onclick="openFileModal('${plan.id}')" aria-label="Add file" title="Add file">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 5v14M5 12h14" stroke-linecap="round"/>
-                        </svg>
-                    </button>
-                </div>
-            </div>
+        <section class="sidebar-files">
+            <header class="files-header">
+                <span class="files-label">Files</span>
+                <button class="icon-btn" onclick="openFileModal('${plan.id}')" aria-label="Add file" title="Add file">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M5 12h14" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </header>
             
             <div class="file-list">
                 ${plan.files.length === 0 ? `
@@ -323,7 +319,7 @@ function renderPlanDetail(plan) {
                     </a>
                 `).join('')}
             </div>
-        </div>
+        </section>
     `;
 }
 
