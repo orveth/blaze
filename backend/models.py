@@ -131,6 +131,7 @@ class Plan(BaseModel):
     description: Optional[str] = None
     status: PlanStatus = PlanStatus.DRAFT
     files: list[PlanFile] = Field(default_factory=list)
+    archived: bool = False
     created_at: datetime
     updated_at: datetime
     position: int = 0
