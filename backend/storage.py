@@ -90,6 +90,7 @@ class Storage:
             "description": plan.description,
             "status": plan.status.value,
             "files": [{"name": f.name, "content": f.content} for f in plan.files],
+            "archived": plan.archived,
             "created_at": plan.created_at.isoformat(),
             "updated_at": plan.updated_at.isoformat(),
             "position": plan.position,
@@ -111,6 +112,7 @@ class Storage:
             description=data.get("description"),
             status=PlanStatus(data.get("status", "draft")),
             files=files,
+            archived=data.get("archived", False),
             created_at=datetime.fromisoformat(data["created_at"]),
             updated_at=datetime.fromisoformat(data["updated_at"]),
             position=data.get("position", 0),
@@ -308,7 +310,11 @@ class Storage:
         plan_data = data["plans"].get(plan_id)
         return self._dict_to_plan(plan_data) if plan_data else None
 
-    def list_plans(self, status: Optional[PlanStatus] = None) -> list[Plan]:
+    def list_plans(
+        self,
+        status: Optional[PlanStatus] = None,
+        include_archived: bool = False
+    ) -> list[Plan]:
         """List all plans, optionally filtered by status."""
         data = self._read_data()
         
@@ -316,6 +322,10 @@ class Storage:
             return []
         
         plans = [self._dict_to_plan(p) for p in data["plans"].values()]
+        
+        # Filter by archived status
+        if not include_archived:
+            plans = [p for p in plans if not p.archived]
         
         if status:
             plans = [p for p in plans if p.status == status]
@@ -453,6 +463,34 @@ class Storage:
         del data["plans"][plan_id]
         self._write_data(data)
         return True
+    
+    def archive_plan(self, plan_id: str) -> Optional[Plan]:
+        """Archive a plan."""
+        data = self._read_data()
+        
+        if "plans" not in data or plan_id not in data["plans"]:
+            return None
+        
+        plan_data = data["plans"][plan_id]
+        plan_data["archived"] = True
+        plan_data["updated_at"] = now_utc().isoformat()
+        
+        self._write_data(data)
+        return self._dict_to_plan(plan_data)
+    
+    def unarchive_plan(self, plan_id: str) -> Optional[Plan]:
+        """Unarchive a plan."""
+        data = self._read_data()
+        
+        if "plans" not in data or plan_id not in data["plans"]:
+            return None
+        
+        plan_data = data["plans"][plan_id]
+        plan_data["archived"] = False
+        plan_data["updated_at"] = now_utc().isoformat()
+        
+        self._write_data(data)
+        return self._dict_to_plan(plan_data)
 
     def get_board(self) -> dict:
         """Get full board state organized by columns."""

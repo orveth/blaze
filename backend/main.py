@@ -384,6 +384,7 @@ async def create_plan(
 @app.get("/api/plans", response_model=list[Plan])
 async def list_plans(
     status_filter: str | None = None,
+    include_archived: bool = False,
     _: str = Depends(verify_token),
 ):
     """List all plans, optionally filtered by status."""
@@ -399,7 +400,7 @@ async def list_plans(
                 detail=f"Invalid status: {status_filter}",
             )
     
-    plans = storage.list_plans(status=plan_status)
+    plans = storage.list_plans(status=plan_status, include_archived=include_archived)
     return plans
 
 
@@ -457,6 +458,40 @@ async def delete_plan(
         )
     logger.info(f"Deleted plan: {plan_id}")
     return None
+
+
+@app.patch("/api/plans/{plan_id}/archive", response_model=Plan)
+async def archive_plan(
+    plan_id: str,
+    _: str = Depends(verify_token),
+):
+    """Archive a plan."""
+    storage = get_storage()
+    plan = storage.archive_plan(plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {plan_id} not found",
+        )
+    logger.info(f"Archived plan: {plan_id}")
+    return plan
+
+
+@app.patch("/api/plans/{plan_id}/unarchive", response_model=Plan)
+async def unarchive_plan(
+    plan_id: str,
+    _: str = Depends(verify_token),
+):
+    """Unarchive a plan."""
+    storage = get_storage()
+    plan = storage.unarchive_plan(plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {plan_id} not found",
+        )
+    logger.info(f"Unarchived plan: {plan_id}")
+    return plan
 
 
 # --- Plan File Endpoints ---
