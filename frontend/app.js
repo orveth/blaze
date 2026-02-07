@@ -1157,6 +1157,9 @@ document.addEventListener('keydown', (e) => {
 // Close button
 commandPalette.querySelector('.close-btn').addEventListener('click', closeCommandPalette);
 
+// AI button in header
+document.getElementById('aiBtn').addEventListener('click', openCommandPalette);
+
 // Close on backdrop click
 commandPalette.addEventListener('click', (e) => {
     if (e.target === commandPalette) {

@@ -1621,3 +1621,23 @@ select:focus:not(:focus-visible) {
         display: none;
     }
 }
+
+/* AI Button in header */
+.ai-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem !important;
+    background: rgba(141, 185, 157, 0.15);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+}
+
+.ai-btn:hover {
+    background: rgba(141, 185, 157, 0.25);
+}
+
+.ai-btn svg {
+    width: 18px;
+    height: 18px;
+}
