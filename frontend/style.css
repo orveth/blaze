@@ -1373,6 +1373,9 @@ select:focus:not(:focus-visible) {
     max-width: none;
     max-height: none;
     padding: 0;
+}
+
+#commandPalette[open] {
     position: fixed;
     inset: 0;
     display: flex;
