@@ -86,10 +86,8 @@ manager = ConnectionManager()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
-    token = get_api_token()
     logger.info("=" * 50)
     logger.info("Blaze API started")
-    logger.info(f"API Token: {token}")
     logger.info("=" * 50)
     yield
     logger.info("Blaze API shutting down")
@@ -106,7 +104,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Restrict in production
-    allow_credentials=True,
+    allow_credentials=False,  # Can't use credentials with wildcard origins
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -597,7 +595,7 @@ async def nl_create_cards(
         logger.error(f"NL create cards failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="Failed to create cards from prompt"
         )
 
 
@@ -632,7 +630,7 @@ async def nl_create_plan(
         logger.error(f"NL create plan failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="Failed to create plan from idea"
         )
 
 
@@ -686,7 +684,7 @@ async def nl_generate_cards(
         logger.error(f"NL generate cards failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="Failed to generate cards from plan"
         )
 
 

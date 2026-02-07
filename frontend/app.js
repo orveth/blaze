@@ -704,7 +704,15 @@ function getAcceptanceCriteria() {
 function isFormDirty() {
     if (!initialFormState) return false;
     const current = getFormState();
-    return Object.keys(initialFormState).some(key => initialFormState[key] !== current[key]);
+    return Object.keys(initialFormState).some(key => {
+        const initial = initialFormState[key];
+        const curr = current[key];
+        // Handle array comparison (e.g., acceptanceCriteria)
+        if (Array.isArray(initial) && Array.isArray(curr)) {
+            return JSON.stringify(initial) !== JSON.stringify(curr);
+        }
+        return initial !== curr;
+    });
 }
 
 function closeCardModalWithConfirm() {
