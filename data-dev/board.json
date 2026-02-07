@@ -1,0 +1,74 @@
+{
+  "cards": {
+    "84eb0f2a11b7": {
+      "id": "84eb0f2a11b7",
+      "title": "Fix headers",
+      "description": "The headers across this app dont look very good. Improve them. The edit card header looks pretty badd and is not consistent with the main view",
+      "priority": "high",
+      "column": "done",
+      "due_date": null,
+      "tags": [
+        "cairn"
+      ],
+      "created_at": "2026-02-02T22:42:50.741089+00:00",
+      "updated_at": "2026-02-03T01:50:51.348943+00:00",
+      "position": 0
+    },
+    "07d57c5b49bc": {
+      "id": "07d57c5b49bc",
+      "title": "Remove toasts for simple success actions.",
+      "description": "No need to toast things like \"Card moved\" when I get obvious ui feedback that the card moved. If an error occurs, then a toast with the full error details well formatted would be nice",
+      "priority": "medium",
+      "column": "todo",
+      "due_date": null,
+      "tags": [
+        "cairn"
+      ],
+      "created_at": "2026-02-02T23:11:36.594564+00:00",
+      "updated_at": "2026-02-03T00:01:35.871798+00:00",
+      "position": 0
+    },
+    "5ae00c85993f": {
+      "id": "5ae00c85993f",
+      "title": "Improve project tracking",
+      "description": "I want to improve my ability to track projects. Right now the tags are a good first step. Don't overcomplicate the UI, but make a good UX for managing all projects in this single board. Don't introduce new views. Tags and values like this should be tracked so that i don't have to manually type them in every time but I should still be able to create new tags easily.",
+      "priority": "low",
+      "column": "todo",
+      "due_date": null,
+      "tags": [
+        "cairn"
+      ],
+      "created_at": "2026-02-02T23:27:33.341361+00:00",
+      "updated_at": "2026-02-03T00:05:28.797203+00:00",
+      "position": 0
+    },
+    "4d10996b1c9c": {
+      "id": "4d10996b1c9c",
+      "title": "Add the ability to include images for context",
+      "description": "This project is for me to communicate easily with you. I should be able to upload images to these cards so that you can use those to know what I'm talking about. Do this smart. This project runs on your machine, but I may access it from other devices",
+      "priority": "medium",
+      "column": "backlog",
+      "due_date": null,
+      "tags": [
+        "cairn"
+      ],
+      "created_at": "2026-02-03T00:05:22.219032+00:00",
+      "updated_at": "2026-02-03T00:05:22.219032+00:00",
+      "position": 0
+    }
+  },
+  "column_order": {
+    "backlog": [
+      "4d10996b1c9c"
+    ],
+    "todo": [
+      "07d57c5b49bc",
+      "5ae00c85993f"
+    ],
+    "in_progress": [],
+    "review": [],
+    "done": [
+      "84eb0f2a11b7"
+    ]
+  }
+}

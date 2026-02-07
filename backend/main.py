@@ -592,10 +592,10 @@ async def nl_create_cards(
             "cards": [c.model_dump(mode='json') for c in cards]
         }
     except Exception as e:
-        logger.error(f"NL create cards failed: {e}")
+        logger.error(f"NL create cards failed: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create cards from prompt"
+            detail=f"Failed to create cards: {str(e)}"
         )
 
 

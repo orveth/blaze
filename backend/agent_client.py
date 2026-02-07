@@ -71,10 +71,19 @@ def call_agent_sync(prompt: str, timeout: int = 120) -> str:
         )
         
         if result.returncode != 0:
-            logger.error(f"Agent failed with code {result.returncode}: {result.stderr}")
-            raise RuntimeError(f"Agent failed: {result.stderr or 'Unknown error'}")
+            logger.error(f"Agent failed with code {result.returncode}")
+            logger.error(f"Agent stderr: {result.stderr}")
+            logger.error(f"Agent stdout: {result.stdout[:500] if result.stdout else 'empty'}")
+            raise RuntimeError(f"Agent failed (code {result.returncode}): {result.stderr or result.stdout or 'Unknown error'}")
         
-        data = json.loads(result.stdout)
+        logger.debug(f"Agent raw output: {result.stdout[:500]}")
+        
+        try:
+            data = json.loads(result.stdout)
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse agent JSON: {e}")
+            logger.error(f"Raw output was: {result.stdout[:1000]}")
+            raise RuntimeError(f"Agent returned invalid JSON: {result.stdout[:200]}")
         
         if data.get("status") != "ok":
             logger.error(f"Agent returned error status: {data}")
