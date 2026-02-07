@@ -544,23 +544,28 @@ class Storage:
         from .utils import is_overdue
         
         data = self._read_data()
-        cards = [self._dict_to_card(c) for c in data["cards"].values()]
+        all_cards = [self._dict_to_card(c) for c in data["cards"].values()]
+        
+        # Separate archived and active cards
+        archived_count = sum(1 for c in all_cards if c.archived)
+        active_cards = [c for c in all_cards if not c.archived]
         
         by_column = {col.value: 0 for col in Column}
         by_priority = {p.value: 0 for p in Priority}
         overdue_count = 0
         
-        for card in cards:
+        for card in active_cards:
             by_column[card.column.value] += 1
             by_priority[card.priority.value] += 1
             if is_overdue(card.due_date) and card.column != Column.DONE:
                 overdue_count += 1
         
         return {
-            "total_cards": len(cards),
+            "total_cards": len(active_cards),
             "by_column": by_column,
             "by_priority": by_priority,
             "overdue_count": overdue_count,
+            "archived_count": archived_count,
         }
 
 

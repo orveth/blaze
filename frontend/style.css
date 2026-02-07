@@ -1382,6 +1382,7 @@ select:focus:not(:focus-visible) {
     align-items: flex-start;
     justify-content: center;
     padding-top: 15vh;
+    transform: none;
 }
 
 #commandPalette::backdrop {
