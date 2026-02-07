@@ -320,6 +320,16 @@ function renderPlanDetail(plan) {
                 `).join('')}
             </div>
         </section>
+        
+        <section class="sidebar-actions">
+            <button class="btn-secondary btn-generate-cards" onclick="generateCardsFromPlan('${plan.id}')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <path d="M9 12h6M12 9v6"/>
+                </svg>
+                Generate Cards from Plan
+            </button>
+        </section>
     `;
 }
 
@@ -558,9 +568,47 @@ async function updatePlanStatus(planId, newStatus) {
     }
 }
 
+// --- Generate Cards from Plan ---
+let isGeneratingCards = false;
+
+async function generateCardsFromPlan(planId) {
+    if (isGeneratingCards) return;
+    
+    const btn = document.querySelector('.btn-generate-cards');
+    if (!btn) return;
+    
+    // Show loading state
+    isGeneratingCards = true;
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = `
+        <svg class="spinner" width="16" height="16" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="32" stroke-dashoffset="32"/>
+        </svg>
+        Generating...
+    `;
+    btn.disabled = true;
+    
+    try {
+        const response = await api('/api/agent/nl/generate-cards', {
+            method: 'POST',
+            body: JSON.stringify({ plan_id: planId })
+        });
+        
+        toast(`Created ${response.count} card${response.count !== 1 ? 's' : ''}`, 'success');
+        
+    } catch (err) {
+        toast(err.message || 'Failed to generate cards', 'error');
+    } finally {
+        isGeneratingCards = false;
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+    }
+}
+
 // --- Global functions for onclick handlers ---
 window.selectPlan = selectPlan;
 window.openPlanModal = openPlanModal;
 window.openFileModal = openFileModal;
 window.closeDetail = closeDetail;
 window.openStatusDropdown = openStatusDropdown;
+window.generateCardsFromPlan = generateCardsFromPlan;
