@@ -12,6 +12,7 @@ pub struct ListFilters {
     pub priorities: Vec<Priority>,
     pub tags: Vec<String>,
     pub overdue: bool,
+    pub include_archived: bool,
 }
 
 impl Default for ListFilters {
@@ -21,13 +22,14 @@ impl Default for ListFilters {
             priorities: Vec::new(),
             tags: Vec::new(),
             overdue: false,
+            include_archived: false,
         }
     }
 }
 
 pub async fn run(client: &Client, filters: ListFilters) -> Result<()> {
-    // Fetch cards (API supports column filter)
-    let cards = client.list_cards(filters.column).await?;
+    // Fetch cards (API supports column and include_archived filters)
+    let cards = client.list_cards(filters.column, filters.include_archived).await?;
 
     // Apply client-side filters
     let filtered: Vec<Card> = cards

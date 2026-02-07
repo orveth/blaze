@@ -151,11 +151,23 @@ impl Client {
     }
 
     /// List all cards
-    pub async fn list_cards(&self, column: Option<Column>) -> Result<Vec<Card>> {
-        let path = match column {
-            Some(col) => format!("/api/cards?column={}", col),
-            None => "/api/cards".to_string(),
+    pub async fn list_cards(&self, column: Option<Column>, include_archived: bool) -> Result<Vec<Card>> {
+        let mut params = Vec::new();
+        
+        if let Some(col) = column {
+            params.push(format!("column={}", col));
+        }
+        
+        if include_archived {
+            params.push("include_archived=true".to_string());
+        }
+        
+        let path = if params.is_empty() {
+            "/api/cards".to_string()
+        } else {
+            format!("/api/cards?{}", params.join("&"))
         };
+        
         self.get(&path).await
     }
 
