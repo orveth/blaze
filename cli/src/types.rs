@@ -38,6 +38,46 @@ impl Priority {
     }
 }
 
+/// Agent workflow status
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ValueEnum)]
+#[serde(rename_all = "snake_case")]
+pub enum AgentStatus {
+    Ready,
+    InProgress,
+    Blocked,
+    NeedsReview,
+}
+
+impl fmt::Display for AgentStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AgentStatus::Ready => write!(f, "ready"),
+            AgentStatus::InProgress => write!(f, "in_progress"),
+            AgentStatus::Blocked => write!(f, "blocked"),
+            AgentStatus::NeedsReview => write!(f, "needs_review"),
+        }
+    }
+}
+
+impl AgentStatus {
+    /// Get status emoji
+    pub fn emoji(&self) -> &'static str {
+        match self {
+            AgentStatus::Ready => "🟢",
+            AgentStatus::InProgress => "🔵",
+            AgentStatus::Blocked => "🟡",
+            AgentStatus::NeedsReview => "🔴",
+        }
+    }
+}
+
+/// Agent progress entry
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentProgressEntry {
+    pub timestamp: DateTime<Utc>,
+    pub message: String,
+}
+
 /// Board columns (workflow stages)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ValueEnum)]
 #[serde(rename_all = "snake_case")]
@@ -89,6 +129,17 @@ pub struct Card {
     pub updated_at: DateTime<Utc>,
     #[serde(default)]
     pub position: i32,
+    // Agent workflow fields
+    #[serde(default)]
+    pub agent_assignable: bool,
+    pub agent_status: Option<AgentStatus>,
+    #[serde(default)]
+    pub agent_progress: Vec<AgentProgressEntry>,
+    #[serde(default)]
+    pub acceptance_criteria: Vec<String>,
+    #[serde(default)]
+    pub acceptance_checked: Vec<bool>,
+    pub blocked_reason: Option<String>,
 }
 
 /// Request body for creating a card

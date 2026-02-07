@@ -14,6 +14,8 @@ from pydantic import BaseModel
 
 from .auth import verify_token, get_api_token
 from .models import (
+    AgentProgressEntry,
+    AgentStatus,
     BoardStats,
     Card,
     CardCreate,
@@ -192,6 +194,8 @@ async def create_card(
         column=card_data.column,
         due_date=card_data.due_date,
         tags=card_data.tags,
+        agent_assignable=card_data.agent_assignable,
+        acceptance_criteria=card_data.acceptance_criteria,
     )
     logger.info(f"Created card: {card.id} - {card.title}")
     
@@ -227,6 +231,16 @@ async def update_card(
         updates["tags"] = card_data.tags
     if card_data.column is not None:
         updates["column"] = card_data.column
+    # Agent workflow fields
+    if card_data.agent_assignable is not None:
+        updates["agent_assignable"] = card_data.agent_assignable
+        # Set status to ready when enabling agent assignment
+        if card_data.agent_assignable:
+            updates["agent_status"] = AgentStatus.READY.value
+    if card_data.acceptance_criteria is not None:
+        updates["acceptance_criteria"] = card_data.acceptance_criteria
+        # Reset checked state when criteria change
+        updates["acceptance_checked"] = [False] * len(card_data.acceptance_criteria)
 
     card = storage.update_card(card_id, **updates)
     if not card:
@@ -359,6 +373,167 @@ async def archive_column(
     })
     
     return {"archived_count": count}
+
+
+# --- Agent Workflow Endpoints ---
+
+
+class AgentProgressRequest(BaseModel):
+    """Request to add a progress entry."""
+    message: str
+
+
+class AgentStatusRequest(BaseModel):
+    """Request to update agent status."""
+    status: AgentStatus
+    blocked_reason: str | None = None
+
+
+class CriterionCheckRequest(BaseModel):
+    """Request to toggle a criterion."""
+    checked: bool
+
+
+@app.get("/api/agent/ready", response_model=list[Card])
+async def list_agent_ready_cards(
+    _: str = Depends(verify_token),
+):
+    """List cards that are ready for agent work."""
+    storage = get_storage()
+    all_cards = storage.list_cards(include_archived=False)
+    
+    # Filter to agent-assignable cards with ready status
+    ready_cards = [
+        card for card in all_cards
+        if card.agent_assignable and card.agent_status == AgentStatus.READY
+    ]
+    
+    return ready_cards
+
+
+@app.post("/api/cards/{card_id}/agent-progress", response_model=Card)
+async def add_agent_progress(
+    card_id: str,
+    request: AgentProgressRequest,
+    _: str = Depends(verify_token),
+):
+    """Add a progress entry to a card's agent timeline."""
+    storage = get_storage()
+    
+    card = storage.get_card(card_id)
+    if not card:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Card {card_id} not found",
+        )
+    
+    if not card.agent_assignable:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Card is not agent-assignable",
+        )
+    
+    # Add new progress entry
+    from .utils import now_utc
+    new_entry = {"timestamp": now_utc().isoformat(), "message": request.message}
+    progress = [
+        {"timestamp": e.timestamp.isoformat(), "message": e.message}
+        for e in card.agent_progress
+    ]
+    progress.append(new_entry)
+    
+    updated_card = storage.update_card(card_id, agent_progress=progress)
+    logger.info(f"Added agent progress to card {card_id}: {request.message}")
+    
+    # Broadcast to connected clients
+    await manager.broadcast({
+        "type": "card_updated",
+        "card": updated_card.model_dump(mode='json')
+    })
+    
+    return updated_card
+
+
+@app.patch("/api/cards/{card_id}/agent-status", response_model=Card)
+async def update_agent_status(
+    card_id: str,
+    request: AgentStatusRequest,
+    _: str = Depends(verify_token),
+):
+    """Update the agent status of a card."""
+    storage = get_storage()
+    
+    card = storage.get_card(card_id)
+    if not card:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Card {card_id} not found",
+        )
+    
+    if not card.agent_assignable:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Card is not agent-assignable",
+        )
+    
+    updates = {"agent_status": request.status.value}
+    if request.status == AgentStatus.BLOCKED and request.blocked_reason:
+        updates["blocked_reason"] = request.blocked_reason
+    elif request.status != AgentStatus.BLOCKED:
+        updates["blocked_reason"] = None
+    
+    updated_card = storage.update_card(card_id, **updates)
+    logger.info(f"Updated agent status for card {card_id}: {request.status.value}")
+    
+    # Broadcast to connected clients
+    await manager.broadcast({
+        "type": "card_updated",
+        "card": updated_card.model_dump(mode='json')
+    })
+    
+    return updated_card
+
+
+@app.post("/api/cards/{card_id}/criteria/{index}/check", response_model=Card)
+async def toggle_criterion(
+    card_id: str,
+    index: int,
+    request: CriterionCheckRequest,
+    _: str = Depends(verify_token),
+):
+    """Toggle an acceptance criterion's checked state."""
+    storage = get_storage()
+    
+    card = storage.get_card(card_id)
+    if not card:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Card {card_id} not found",
+        )
+    
+    if index < 0 or index >= len(card.acceptance_criteria):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid criterion index: {index}",
+        )
+    
+    # Update the checked state
+    checked = list(card.acceptance_checked)
+    # Ensure list is long enough
+    while len(checked) < len(card.acceptance_criteria):
+        checked.append(False)
+    checked[index] = request.checked
+    
+    updated_card = storage.update_card(card_id, acceptance_checked=checked)
+    logger.info(f"Toggled criterion {index} for card {card_id}: {request.checked}")
+    
+    # Broadcast to connected clients
+    await manager.broadcast({
+        "type": "card_updated",
+        "card": updated_card.model_dump(mode='json')
+    })
+    
+    return updated_card
 
 
 # --- Plan Endpoints ---

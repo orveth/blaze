@@ -10,7 +10,7 @@ mod output;
 mod types;
 
 use clap::{Parser, Subcommand};
-use commands::{add, board, edit, list, move_card, ping, plan, rm, show, stats};
+use commands::{add, agent, board, edit, list, move_card, ping, plan, rm, show, stats};
 use types::{Column, PlanStatus, Priority};
 
 #[derive(Parser)]
@@ -164,6 +164,12 @@ enum Commands {
         #[command(subcommand)]
         action: PlanCommands,
     },
+
+    /// Agent workflow commands
+    Agent {
+        #[command(subcommand)]
+        action: AgentCommands,
+    },
 }
 
 #[derive(Subcommand)]
@@ -266,6 +272,55 @@ enum PlanFileCommands {
 
         /// Filename
         filename: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum AgentCommands {
+    /// List cards ready for agent work
+    List,
+
+    /// Start working on a card (sets status to in_progress)
+    Start {
+        /// Card ID
+        card_id: String,
+    },
+
+    /// Add a progress entry to a card
+    Progress {
+        /// Card ID
+        card_id: String,
+
+        /// Progress message
+        message: String,
+    },
+
+    /// Mark card as blocked
+    Block {
+        /// Card ID
+        card_id: String,
+
+        /// Reason for blocking
+        reason: String,
+    },
+
+    /// Complete work on a card (sets status to needs_review)
+    Done {
+        /// Card ID
+        card_id: String,
+    },
+
+    /// Check/uncheck an acceptance criterion
+    Check {
+        /// Card ID
+        card_id: String,
+
+        /// Criterion index (0-based)
+        index: usize,
+
+        /// Check (true) or uncheck (false)
+        #[arg(long, default_value = "true")]
+        checked: bool,
     },
 }
 
@@ -414,6 +469,24 @@ async fn run() -> error::Result<()> {
                         plan::file_rm(&client, &plan_id, &filename).await
                     }
                 },
+            }
+        }
+
+        Commands::Agent { action } => {
+            let client = client::Client::new(&url, token)?;
+            match action {
+                AgentCommands::List => agent::list(&client).await,
+                AgentCommands::Start { card_id } => agent::start(&client, &card_id).await,
+                AgentCommands::Progress { card_id, message } => {
+                    agent::progress(&client, &card_id, &message).await
+                }
+                AgentCommands::Block { card_id, reason } => {
+                    agent::block(&client, &card_id, &reason).await
+                }
+                AgentCommands::Done { card_id } => agent::done(&client, &card_id).await,
+                AgentCommands::Check { card_id, index, checked } => {
+                    agent::check(&client, &card_id, index, checked).await
+                }
             }
         }
     }

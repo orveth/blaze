@@ -208,6 +208,52 @@
                     </div>
                 </div>
                 
+                <!-- Agent Workflow Section -->
+                <div class="agent-section" id="agentSection">
+                    <div class="agent-header" id="agentHeader">
+                        <label class="toggle-field">
+                            <input type="checkbox" id="cardAgentAssignable" name="agent_assignable">
+                            <span class="toggle-label">
+                                <svg class="agent-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="11" width="18" height="10" rx="2"/>
+                                    <circle cx="12" cy="5" r="3"/>
+                                    <path d="M12 8v3"/>
+                                    <circle cx="8" cy="16" r="1.5" fill="currentColor"/>
+                                    <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
+                                </svg>
+                                Agent Assignable
+                            </span>
+                        </label>
+                    </div>
+                    
+                    <div class="agent-details" id="agentDetails" style="display: none;">
+                        <!-- Agent Status (read-only display) -->
+                        <div class="agent-status-row" id="agentStatusRow" style="display: none;">
+                            <span class="field-label">Status</span>
+                            <span class="agent-status-badge" id="agentStatusBadge"></span>
+                        </div>
+                        
+                        <!-- Blocked Reason (when status is blocked) -->
+                        <div class="agent-blocked-row" id="agentBlockedRow" style="display: none;">
+                            <span class="field-label">Blocked</span>
+                            <span class="agent-blocked-reason" id="agentBlockedReason"></span>
+                        </div>
+                        
+                        <!-- Acceptance Criteria -->
+                        <div class="field">
+                            <label>Acceptance Criteria</label>
+                            <div class="criteria-list" id="criteriaList"></div>
+                            <button type="button" class="btn-ghost btn-sm" id="addCriterionBtn">+ Add criterion</button>
+                        </div>
+                        
+                        <!-- Progress Timeline (read-only) -->
+                        <div class="agent-progress" id="agentProgress" style="display: none;">
+                            <label>Progress</label>
+                            <div class="progress-timeline" id="progressTimeline"></div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="card-timestamps" id="cardTimestamps" style="display: none;">
                     <div class="timestamp-item">
                         <span class="timestamp-label">Created:</span>

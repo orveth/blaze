@@ -164,6 +164,13 @@ function setupEventListeners() {
             });
         }
     });
+    
+    // Agent workflow
+    document.getElementById('cardAgentAssignable').addEventListener('change', (e) => {
+        document.getElementById('agentDetails').style.display = e.target.checked ? 'block' : 'none';
+    });
+    
+    document.getElementById('addCriterionBtn').addEventListener('click', addCriterion);
 }
 
 // Auth
@@ -353,6 +360,23 @@ function createCardElement(card) {
     if (card.tags && card.tags.length > 0) {
         const tagsHtml = card.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('');
         metaParts.push(`<div class="card-tags">${tagsHtml}</div>`);
+    }
+
+    // Agent indicator
+    if (card.agent_assignable) {
+        let badgeClass = '';
+        let statusText = '';
+        if (card.agent_status === 'blocked') {
+            badgeClass = 'blocked';
+            statusText = 'Blocked';
+        } else if (card.agent_status === 'needs_review') {
+            badgeClass = 'needs_review';
+            statusText = 'Review';
+        } else if (card.agent_status === 'in_progress') {
+            statusText = 'Working';
+        }
+        const agentIcon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="3"/><path d="M12 8v3"/><circle cx="8" cy="16" r="1.5" fill="currentColor"/><circle cx="16" cy="16" r="1.5" fill="currentColor"/></svg>`;
+        metaParts.push(`<span class="card-agent-badge ${badgeClass}">${agentIcon}${statusText ? ' ' + statusText : ''}</span>`);
     }
 
     if (metaParts.length > 0) {
@@ -661,8 +685,20 @@ function getFormState() {
         priority: document.getElementById('cardPriority').value,
         column: document.getElementById('cardColumn').value,
         dueDate: document.getElementById('cardDueDate').value,
-        tags: document.getElementById('cardTags').value
+        tags: document.getElementById('cardTags').value,
+        agentAssignable: document.getElementById('cardAgentAssignable').checked,
+        acceptanceCriteria: getAcceptanceCriteria()
     };
+}
+
+// Get current acceptance criteria from the form
+function getAcceptanceCriteria() {
+    const criteria = [];
+    document.querySelectorAll('#criteriaList .criterion-item').forEach(item => {
+        const text = item.querySelector('input[type="text"]').value.trim();
+        if (text) criteria.push(text);
+    });
+    return criteria;
 }
 
 function isFormDirty() {
@@ -689,6 +725,17 @@ function openCardModal(card = null) {
     const timestamps = document.getElementById('cardTimestamps');
     const createdAt = document.getElementById('cardCreatedAt');
     const updatedAt = document.getElementById('cardUpdatedAt');
+    
+    // Agent workflow elements
+    const agentAssignable = document.getElementById('cardAgentAssignable');
+    const agentDetails = document.getElementById('agentDetails');
+    const agentStatusRow = document.getElementById('agentStatusRow');
+    const agentStatusBadge = document.getElementById('agentStatusBadge');
+    const agentBlockedRow = document.getElementById('agentBlockedRow');
+    const agentBlockedReason = document.getElementById('agentBlockedReason');
+    const criteriaList = document.getElementById('criteriaList');
+    const agentProgress = document.getElementById('agentProgress');
+    const progressTimeline = document.getElementById('progressTimeline');
 
     if (card) {
         title.textContent = 'Edit Card';
@@ -718,6 +765,39 @@ function openCardModal(card = null) {
             updatedAt.textContent = formatTimestamp(card.updated_at);
         }
         timestamps.style.display = 'block';
+        
+        // Agent workflow
+        agentAssignable.checked = card.agent_assignable || false;
+        agentDetails.style.display = card.agent_assignable ? 'block' : 'none';
+        
+        // Agent status
+        if (card.agent_assignable && card.agent_status) {
+            agentStatusRow.style.display = 'flex';
+            agentStatusBadge.className = 'agent-status-badge ' + card.agent_status;
+            agentStatusBadge.textContent = formatAgentStatus(card.agent_status);
+            
+            // Blocked reason
+            if (card.agent_status === 'blocked' && card.blocked_reason) {
+                agentBlockedRow.style.display = 'flex';
+                agentBlockedReason.textContent = card.blocked_reason;
+            } else {
+                agentBlockedRow.style.display = 'none';
+            }
+        } else {
+            agentStatusRow.style.display = 'none';
+            agentBlockedRow.style.display = 'none';
+        }
+        
+        // Acceptance criteria
+        renderCriteriaList(card.acceptance_criteria || [], card.acceptance_checked || [], card.id);
+        
+        // Progress timeline
+        if (card.agent_assignable && card.agent_progress && card.agent_progress.length > 0) {
+            agentProgress.style.display = 'block';
+            renderProgressTimeline(card.agent_progress);
+        } else {
+            agentProgress.style.display = 'none';
+        }
     } else {
         title.textContent = 'New Card';
         deleteBtn.style.display = 'none';
@@ -725,12 +805,124 @@ function openCardModal(card = null) {
         timestamps.style.display = 'none';
         cardForm.reset();
         document.getElementById('cardId').value = '';
+        
+        // Reset agent workflow
+        agentAssignable.checked = false;
+        agentDetails.style.display = 'none';
+        agentStatusRow.style.display = 'none';
+        agentBlockedRow.style.display = 'none';
+        criteriaList.innerHTML = '';
+        agentProgress.style.display = 'none';
     }
 
     cardModal.showModal();
     
     // Capture initial state for dirty checking
     initialFormState = getFormState();
+}
+
+// Format agent status for display
+function formatAgentStatus(status) {
+    const labels = {
+        'ready': 'Ready',
+        'in_progress': 'In Progress',
+        'blocked': 'Blocked',
+        'needs_review': 'Needs Review'
+    };
+    return labels[status] || status;
+}
+
+// Render the acceptance criteria list
+function renderCriteriaList(criteria, checked, cardId) {
+    const list = document.getElementById('criteriaList');
+    list.innerHTML = '';
+    
+    criteria.forEach((text, index) => {
+        const item = document.createElement('div');
+        item.className = 'criterion-item';
+        
+        const isChecked = checked[index] || false;
+        
+        item.innerHTML = `
+            <input type="checkbox" ${isChecked ? 'checked' : ''} data-index="${index}">
+            <input type="text" value="${escapeHtml(text)}" class="${isChecked ? 'checked-text' : ''}">
+            <button type="button" class="criterion-remove" title="Remove">&times;</button>
+        `;
+        
+        // Toggle criterion via API (only for existing cards)
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        checkbox.addEventListener('change', async (e) => {
+            if (cardId) {
+                try {
+                    await apiCall(`/cards/${cardId}/criteria/${index}/check`, {
+                        method: 'POST',
+                        body: JSON.stringify({ checked: e.target.checked })
+                    });
+                    // Update text styling
+                    const textInput = item.querySelector('input[type="text"]');
+                    textInput.classList.toggle('checked-text', e.target.checked);
+                } catch (error) {
+                    showToast(`Failed to update criterion: ${error.message}`, 'error');
+                    e.target.checked = !e.target.checked;
+                }
+            } else {
+                // For new cards, just update styling
+                const textInput = item.querySelector('input[type="text"]');
+                textInput.classList.toggle('checked-text', e.target.checked);
+            }
+        });
+        
+        // Remove button
+        item.querySelector('.criterion-remove').addEventListener('click', () => {
+            item.remove();
+        });
+        
+        list.appendChild(item);
+    });
+}
+
+// Render progress timeline
+function renderProgressTimeline(progress) {
+    const timeline = document.getElementById('progressTimeline');
+    
+    if (!progress || progress.length === 0) {
+        timeline.innerHTML = '<div class="progress-empty">No progress entries yet</div>';
+        return;
+    }
+    
+    // Sort by timestamp descending (newest first)
+    const sorted = [...progress].sort((a, b) => 
+        new Date(b.timestamp) - new Date(a.timestamp)
+    );
+    
+    timeline.innerHTML = sorted.map(entry => `
+        <div class="progress-entry">
+            <div class="progress-timestamp">${formatTimestamp(entry.timestamp)}</div>
+            <div class="progress-message">${escapeHtml(entry.message)}</div>
+        </div>
+    `).join('');
+}
+
+// Add new criterion
+function addCriterion() {
+    const list = document.getElementById('criteriaList');
+    const item = document.createElement('div');
+    item.className = 'criterion-item';
+    
+    item.innerHTML = `
+        <input type="checkbox">
+        <input type="text" placeholder="Criterion...">
+        <button type="button" class="criterion-remove" title="Remove">&times;</button>
+    `;
+    
+    item.querySelector('.criterion-remove').addEventListener('click', () => {
+        item.remove();
+    });
+    
+    list.appendChild(item);
+    
+    // Focus the new input
+    item.querySelector('input[type="text"]').focus();
 }
 
 async function handleSaveCard(e) {
@@ -745,7 +937,9 @@ async function handleSaveCard(e) {
         priority: formData.get('priority'),
         column: formData.get('column'),
         due_date: dueDateValue ? new Date(dueDateValue + 'T00:00:00').toISOString() : null,
-        tags: formData.get('tags').split(',').map(t => t.trim()).filter(t => t)
+        tags: formData.get('tags').split(',').map(t => t.trim()).filter(t => t),
+        agent_assignable: document.getElementById('cardAgentAssignable').checked,
+        acceptance_criteria: getAcceptanceCriteria()
     };
 
     const cardId = formData.get('cardId');
