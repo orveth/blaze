@@ -351,12 +351,6 @@ function createCardElement(card) {
     // Meta section
     const metaParts = [];
 
-    if (card.due_date) {
-        const dueDate = new Date(card.due_date);
-        const formattedDate = dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        metaParts.push(`<span class="card-due ${dueClass}">${formattedDate}</span>`);
-    }
-
     if (card.tags && card.tags.length > 0) {
         const tagsHtml = card.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('');
         metaParts.push(`<div class="card-tags">${tagsHtml}</div>`);
@@ -684,7 +678,6 @@ function getFormState() {
         description: document.getElementById('cardDescription').value,
         priority: document.getElementById('cardPriority').value,
         column: document.getElementById('cardColumn').value,
-        dueDate: document.getElementById('cardDueDate').value,
         tags: document.getElementById('cardTags').value,
         agentAssignable: document.getElementById('cardAgentAssignable').checked,
         acceptanceCriteria: getAcceptanceCriteria()
@@ -750,18 +743,15 @@ function openCardModal(card = null) {
         deleteBtn.style.display = 'block';
         archiveBtn.style.display = 'block';
 
+        // Get current column from DOM position (in case card was dragged)
+        const cardEl = document.querySelector(`.card[data-id="${card.id}"]`);
+        const currentColumn = cardEl?.closest('.cards')?.dataset.column || card.column;
+
         document.getElementById('cardId').value = card.id;
         document.getElementById('cardTitle').value = card.title;
         document.getElementById('cardDescription').value = card.description || '';
         document.getElementById('cardPriority').value = card.priority;
-        document.getElementById('cardColumn').value = card.column;
-
-        if (card.due_date) {
-            const date = new Date(card.due_date);
-            document.getElementById('cardDueDate').value = date.toISOString().split('T')[0];
-        } else {
-            document.getElementById('cardDueDate').value = '';
-        }
+        document.getElementById('cardColumn').value = currentColumn;
 
         document.getElementById('cardTags').value = (card.tags || []).join(', ');
 
@@ -937,14 +927,13 @@ async function handleSaveCard(e) {
     e.preventDefault();
 
     const formData = new FormData(cardForm);
-    const dueDateValue = formData.get('due_date');
 
     const cardData = {
         title: formData.get('title').trim(),
         description: formData.get('description').trim() || null,
         priority: formData.get('priority'),
         column: formData.get('column'),
-        due_date: dueDateValue ? new Date(dueDateValue + 'T00:00:00').toISOString() : null,
+        due_date: null,  // Due date removed from UI
         tags: formData.get('tags').split(',').map(t => t.trim()).filter(t => t),
         agent_assignable: document.getElementById('cardAgentAssignable').checked,
         acceptance_criteria: getAcceptanceCriteria()
@@ -1082,6 +1071,16 @@ function renderStats(stats) {
                         <span class="stat-value">${count}</span>
                     </div>
                 `).join('')}
+            </div>
+        </div>
+
+        <div class="stats-section">
+            <h4>Archived</h4>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Archived</span>
+                    <span class="stat-value" style="color: var(--text-3)">${stats.archived_count}</span>
+                </div>
             </div>
         </div>
     `;

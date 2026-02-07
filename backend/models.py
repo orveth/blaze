@@ -99,6 +99,7 @@ class BoardStats(BaseModel):
     by_column: dict[str, int]
     by_priority: dict[str, int]
     overdue_count: int
+    archived_count: int
 
 
 class Board(BaseModel):
