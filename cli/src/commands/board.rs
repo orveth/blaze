@@ -5,7 +5,7 @@ use crate::error::Result;
 use crate::output::print_board_summary;
 
 pub async fn run(client: &Client) -> Result<()> {
-    let cards = client.list_cards(None).await?;
+    let cards = client.list_cards(None, false).await?;
     print_board_summary(&cards);
     Ok(())
 }

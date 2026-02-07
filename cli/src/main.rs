@@ -52,6 +52,10 @@ enum Commands {
         /// Show only overdue cards
         #[arg(long)]
         overdue: bool,
+
+        /// Include archived cards (excluded by default)
+        #[arg(long)]
+        include_archived: bool,
     },
 
     /// Show card details
@@ -292,6 +296,7 @@ async fn run() -> error::Result<()> {
             priority,
             tag,
             overdue,
+            include_archived,
         } => {
             let client = client::Client::new(&url, token)?;
             let filters = list::ListFilters {
@@ -299,6 +304,7 @@ async fn run() -> error::Result<()> {
                 priorities: priority,
                 tags: tag,
                 overdue,
+                include_archived,
             };
             list::run(&client, filters).await
         }
