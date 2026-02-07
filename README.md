@@ -121,10 +121,61 @@ blaze/
 - **Priority levels:** Low (🟢) → Medium (🟡) → High (🟠) → Urgent (🔴)
 - **Due dates** with overdue indicators
 - **Archiving:** Hide cards without deleting them (archived cards retain their column and can be unarchived)
+- **Agent workflow:** AI-friendly task tracking with acceptance criteria and progress timeline
 - **Simple token auth** (printed on startup)
 - **JSON file persistence** with thread-safe locking
 - **Systemd hardening** (NixOS deployment)
 - Toast notifications for feedback
+
+## Agent Workflow
+
+Blaze supports AI agent task management with structured acceptance criteria and progress tracking.
+
+### Card Features
+
+- **Agent Assignable Toggle:** Mark cards that agents can work on
+- **Acceptance Criteria:** Checkable list of requirements for completion
+- **Progress Timeline:** Chronological log of agent activity
+- **Status Tracking:** 
+  - 🟢 **Ready** — Agent can pick this up
+  - 🔵 **In Progress** — Agent is actively working
+  - 🔴 **Blocked** — Waiting for human input (with reason)
+  - 🟡 **Needs Review** — Agent finished, needs human approval
+
+### CLI Commands
+
+```bash
+# List cards ready for agent work
+blaze agent list
+
+# Start working on a card (sets status to in_progress)
+blaze agent start <card-id>
+
+# Log progress
+blaze agent progress <card-id> "Implemented feature X"
+
+# Toggle acceptance criterion
+blaze agent check <card-id> <index>
+
+# Mark blocked with reason
+blaze agent block <card-id> "Need API credentials"
+
+# Mark ready for review
+blaze agent review <card-id>
+```
+
+### UI
+
+- **Card Modal:** Shows agent status, acceptance criteria (with checkboxes), and progress timeline
+- **Board Cards:** Display agent badge (🤖) with status indicator
+- **Live Updates:** Criterion toggles update via WebSocket immediately
+
+### Use Cases
+
+- **Autonomous task execution:** Agents pick up cards, log progress, mark completion
+- **Human-in-the-loop:** Agents can request input by marking tasks blocked
+- **Structured requirements:** Acceptance criteria ensure clear task definition
+- **Audit trail:** Progress timeline shows agent decision-making process
 
 ## API
 
@@ -144,6 +195,11 @@ All endpoints (except `/health` and auth) require `Authorization: Bearer <token>
 | PATCH | `/api/cards/{id}/unarchive` | Unarchive card |
 | POST | `/api/columns/{column}/archive` | Archive all cards in a column |
 | DELETE | `/api/cards/{id}` | Delete card |
+| **Agent Workflow** |
+| GET | `/api/agent/ready` | List cards ready for agent work |
+| POST | `/api/cards/{id}/agent-progress` | Add progress entry (`{message}`) |
+| PATCH | `/api/cards/{id}/agent-status` | Update status (`{status, blocked_reason?}`) |
+| POST | `/api/cards/{id}/criteria/{i}/check` | Toggle criterion (`{checked}`) |
 
 ### Archiving Behavior
 
