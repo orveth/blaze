@@ -15,6 +15,14 @@ class Priority(str, Enum):
     URGENT = "urgent"  # Highest priority
 
 
+class AgentStatus(str, Enum):
+    """Agent workflow status for a card."""
+    READY = "ready"  # Agent can pick this up
+    IN_PROGRESS = "in_progress"  # Agent is working on it
+    BLOCKED = "blocked"  # Agent is waiting for human input
+    NEEDS_REVIEW = "needs_review"  # Agent finished, needs human review
+
+
 class Column(str, Enum):
     """Board columns (workflow stages)."""
     BACKLOG = "backlog"
@@ -22,6 +30,12 @@ class Column(str, Enum):
     IN_PROGRESS = "in_progress"
     REVIEW = "review"
     DONE = "done"
+
+
+class AgentProgressEntry(BaseModel):
+    """A single progress entry in the agent timeline."""
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    message: str = Field(..., min_length=1, max_length=500)
 
 
 class CardBase(BaseModel):
@@ -36,6 +50,9 @@ class CardBase(BaseModel):
 class CardCreate(CardBase):
     """Fields for creating a new card."""
     column: Column = Column.BACKLOG
+    # Agent workflow fields
+    agent_assignable: bool = False
+    acceptance_criteria: list[str] = Field(default_factory=list)
 
 
 class CardUpdate(BaseModel):
@@ -46,6 +63,9 @@ class CardUpdate(BaseModel):
     due_date: Optional[datetime] = None
     tags: Optional[list[str]] = None
     column: Optional[Column] = None
+    # Agent workflow fields
+    agent_assignable: Optional[bool] = None
+    acceptance_criteria: Optional[list[str]] = None
 
 
 class CardMove(BaseModel):
@@ -61,6 +81,13 @@ class Card(CardBase):
     updated_at: datetime
     position: int = 0
     archived: bool = False
+    # Agent workflow fields
+    agent_assignable: bool = False
+    agent_status: Optional[AgentStatus] = None
+    agent_progress: list[AgentProgressEntry] = Field(default_factory=list)
+    acceptance_criteria: list[str] = Field(default_factory=list)
+    acceptance_checked: list[bool] = Field(default_factory=list)  # Parallel to criteria
+    blocked_reason: Optional[str] = None
 
     class Config:
         from_attributes = True

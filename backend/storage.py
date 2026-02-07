@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from .models import Card, Column, Priority, Plan, PlanStatus, PlanFile
+from .models import Card, Column, Priority, Plan, PlanStatus, PlanFile, AgentStatus, AgentProgressEntry
 from .utils import generate_id, now_utc
 
 
@@ -64,10 +64,33 @@ class Storage:
             "updated_at": card.updated_at.isoformat(),
             "position": card.position,
             "archived": card.archived,
+            # Agent workflow fields
+            "agent_assignable": card.agent_assignable,
+            "agent_status": card.agent_status.value if card.agent_status else None,
+            "agent_progress": [
+                {"timestamp": e.timestamp.isoformat(), "message": e.message}
+                for e in card.agent_progress
+            ],
+            "acceptance_criteria": card.acceptance_criteria,
+            "acceptance_checked": card.acceptance_checked,
+            "blocked_reason": card.blocked_reason,
         }
 
     def _dict_to_card(self, data: dict) -> Card:
         """Convert stored dict to Card model."""
+        # Parse agent progress entries
+        agent_progress = []
+        for entry in data.get("agent_progress", []):
+            agent_progress.append(AgentProgressEntry(
+                timestamp=datetime.fromisoformat(entry["timestamp"]),
+                message=entry["message"],
+            ))
+        
+        # Parse agent status
+        agent_status = None
+        if data.get("agent_status"):
+            agent_status = AgentStatus(data["agent_status"])
+        
         return Card(
             id=data["id"],
             title=data["title"],
@@ -80,6 +103,13 @@ class Storage:
             updated_at=datetime.fromisoformat(data["updated_at"]),
             position=data.get("position", 0),
             archived=data.get("archived", False),
+            # Agent workflow fields
+            agent_assignable=data.get("agent_assignable", False),
+            agent_status=agent_status,
+            agent_progress=agent_progress,
+            acceptance_criteria=data.get("acceptance_criteria", []),
+            acceptance_checked=data.get("acceptance_checked", []),
+            blocked_reason=data.get("blocked_reason"),
         )
 
     def _plan_to_dict(self, plan: Plan) -> dict:
@@ -157,9 +187,12 @@ class Storage:
                     priority: Priority = Priority.MEDIUM,
                     column: Column = Column.BACKLOG,
                     due_date: Optional[datetime] = None,
-                    tags: Optional[list[str]] = None) -> Card:
+                    tags: Optional[list[str]] = None,
+                    agent_assignable: bool = False,
+                    acceptance_criteria: Optional[list[str]] = None) -> Card:
         """Create a new card."""
         now = now_utc()
+        criteria = acceptance_criteria or []
         card = Card(
             id=generate_id(),
             title=title,
@@ -171,6 +204,10 @@ class Storage:
             created_at=now,
             updated_at=now,
             position=0,
+            agent_assignable=agent_assignable,
+            agent_status=AgentStatus.READY if agent_assignable else None,
+            acceptance_criteria=criteria,
+            acceptance_checked=[False] * len(criteria),  # Initialize all as unchecked
         )
 
         data = self._read_data()
