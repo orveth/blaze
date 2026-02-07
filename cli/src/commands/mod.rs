@@ -1,6 +1,7 @@
 //! CLI command implementations.
 
 pub mod add;
+pub mod agent;
 pub mod board;
 pub mod edit;
 pub mod list;

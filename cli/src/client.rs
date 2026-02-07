@@ -2,6 +2,7 @@
 
 use crate::error::{BlazeError, Result};
 use crate::types::*;
+use serde::Serialize;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use reqwest::Client as HttpClient;
 use serde::de::DeserializeOwned;
@@ -203,6 +204,42 @@ impl Client {
     /// Get board statistics
     pub async fn stats(&self) -> Result<BoardStats> {
         self.get("/api/board/stats").await
+    }
+
+    // --- Agent Workflow Methods ---
+
+    /// List cards ready for agent work
+    pub async fn list_agent_ready(&self) -> Result<Vec<Card>> {
+        self.get("/api/agent/ready").await
+    }
+
+    /// Add a progress entry to a card
+    pub async fn add_agent_progress(&self, id: &str, message: &str) -> Result<Card> {
+        #[derive(Serialize)]
+        struct ProgressRequest<'a> {
+            message: &'a str,
+        }
+        self.post(&format!("/api/cards/{}/agent-progress", id), &ProgressRequest { message }).await
+    }
+
+    /// Update agent status for a card
+    pub async fn update_agent_status(&self, id: &str, status: AgentStatus, blocked_reason: Option<String>) -> Result<Card> {
+        #[derive(Serialize)]
+        struct StatusRequest {
+            status: AgentStatus,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            blocked_reason: Option<String>,
+        }
+        self.patch(&format!("/api/cards/{}/agent-status", id), &StatusRequest { status, blocked_reason }).await
+    }
+
+    /// Toggle an acceptance criterion
+    pub async fn toggle_criterion(&self, id: &str, index: usize, checked: bool) -> Result<Card> {
+        #[derive(Serialize)]
+        struct CheckRequest {
+            checked: bool,
+        }
+        self.post(&format!("/api/cards/{}/criteria/{}/check", id, index), &CheckRequest { checked }).await
     }
 
     // --- Plan Methods ---
