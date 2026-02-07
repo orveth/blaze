@@ -31,6 +31,7 @@ from .models import (
     PlanFileUpdate,
 )
 from .storage import get_storage
+from . import agent_client
 
 # Logging setup
 logging.basicConfig(
@@ -85,10 +86,8 @@ manager = ConnectionManager()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
-    token = get_api_token()
     logger.info("=" * 50)
     logger.info("Blaze API started")
-    logger.info(f"API Token: {token}")
     logger.info("=" * 50)
     yield
     logger.info("Blaze API shutting down")
@@ -105,7 +104,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Restrict in production
-    allow_credentials=True,
+    allow_credentials=False,  # Can't use credentials with wildcard origins
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -534,6 +533,159 @@ async def toggle_criterion(
     })
     
     return updated_card
+
+
+# --- Natural Language Interface Endpoints ---
+
+
+class NLCreateCardsRequest(BaseModel):
+    """Request to create cards from natural language."""
+    prompt: str
+    column: str = "todo"
+
+
+class NLCreatePlanRequest(BaseModel):
+    """Request to create a plan from natural language idea."""
+    idea: str
+
+
+class NLGenerateCardsRequest(BaseModel):
+    """Request to generate cards from an existing plan."""
+    plan_id: str
+    context: str | None = None
+
+
+@app.post("/api/agent/nl/create-cards")
+async def nl_create_cards(
+    request: NLCreateCardsRequest,
+    _: str = Depends(verify_token),
+):
+    """
+    Create cards from a natural language prompt.
+    
+    Example prompts:
+    - "Set up CI/CD: GitHub Actions, tests, linting, deployment"
+    - "Create tasks for user authentication: login, logout, password reset"
+    """
+    try:
+        card_ids = await agent_client.create_cards_from_prompt(
+            request.prompt,
+            request.column
+        )
+        logger.info(f"NL created {len(card_ids)} cards: {card_ids}")
+        
+        # Fetch the created cards to return full objects
+        storage = get_storage()
+        cards = [storage.get_card(cid) for cid in card_ids]
+        cards = [c for c in cards if c is not None]
+        
+        # Broadcast each card creation
+        for card in cards:
+            await manager.broadcast({
+                "type": "card_created",
+                "card": card.model_dump(mode='json')
+            })
+        
+        return {
+            "card_ids": card_ids,
+            "count": len(card_ids),
+            "cards": [c.model_dump(mode='json') for c in cards]
+        }
+    except Exception as e:
+        logger.error(f"NL create cards failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create cards from prompt"
+        )
+
+
+@app.post("/api/agent/nl/create-plan")
+async def nl_create_plan(
+    request: NLCreatePlanRequest,
+    _: str = Depends(verify_token),
+):
+    """
+    Create a plan from a natural language idea.
+    
+    The agent will generate a structured plan document with:
+    - Goal/objective
+    - Key features or requirements
+    - Technical considerations
+    - Implementation phases
+    - Success criteria
+    """
+    try:
+        plan_id = await agent_client.create_plan_from_idea(request.idea)
+        logger.info(f"NL created plan: {plan_id}")
+        
+        # Fetch the created plan
+        storage = get_storage()
+        plan = storage.get_plan(plan_id)
+        
+        return {
+            "plan_id": plan_id,
+            "plan": plan.model_dump(mode='json') if plan else None
+        }
+    except Exception as e:
+        logger.error(f"NL create plan failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create plan from idea"
+        )
+
+
+@app.post("/api/agent/nl/generate-cards")
+async def nl_generate_cards(
+    request: NLGenerateCardsRequest,
+    _: str = Depends(verify_token),
+):
+    """
+    Generate actionable cards from an existing plan.
+    
+    The agent reads the plan content and breaks it down into
+    concrete, actionable tasks as cards in the todo column.
+    """
+    try:
+        # Verify plan exists
+        storage = get_storage()
+        plan = storage.get_plan(request.plan_id)
+        if not plan:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Plan {request.plan_id} not found"
+            )
+        
+        card_ids = await agent_client.generate_cards_from_plan(
+            request.plan_id,
+            request.context
+        )
+        logger.info(f"NL generated {len(card_ids)} cards from plan {request.plan_id}")
+        
+        # Fetch the created cards
+        cards = [storage.get_card(cid) for cid in card_ids]
+        cards = [c for c in cards if c is not None]
+        
+        # Broadcast each card creation
+        for card in cards:
+            await manager.broadcast({
+                "type": "card_created",
+                "card": card.model_dump(mode='json')
+            })
+        
+        return {
+            "plan_id": request.plan_id,
+            "card_ids": card_ids,
+            "count": len(card_ids),
+            "cards": [c.model_dump(mode='json') for c in cards]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"NL generate cards failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate cards from plan"
+        )
 
 
 # --- Plan Endpoints ---

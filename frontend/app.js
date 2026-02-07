@@ -704,7 +704,15 @@ function getAcceptanceCriteria() {
 function isFormDirty() {
     if (!initialFormState) return false;
     const current = getFormState();
-    return Object.keys(initialFormState).some(key => initialFormState[key] !== current[key]);
+    return Object.keys(initialFormState).some(key => {
+        const initial = initialFormState[key];
+        const curr = current[key];
+        // Handle array comparison (e.g., acceptanceCriteria)
+        if (Array.isArray(initial) && Array.isArray(curr)) {
+            return JSON.stringify(initial) !== JSON.stringify(curr);
+        }
+        return initial !== curr;
+    });
 }
 
 function closeCardModalWithConfirm() {
@@ -1106,3 +1114,163 @@ function showToast(message, type = 'info') {
 // Export functions for WebSocket sync module
 window.createCardElement = createCardElement;
 window.updateCardCounts = updateCardCounts;
+
+// ====== Command Palette ======
+
+const commandPalette = document.getElementById('commandPalette');
+const commandPaletteForm = document.getElementById('commandPaletteForm');
+const commandInput = document.getElementById('commandInput');
+const commandSubmit = document.getElementById('commandSubmit');
+const commandColumn = document.getElementById('commandColumn');
+
+// Open/close command palette
+function openCommandPalette() {
+    commandPalette.showModal();
+    commandInput.focus();
+    commandInput.value = '';
+    document.querySelector('input[name="commandType"][value="cards"]').checked = true;
+    updateCommandColumnVisibility();
+}
+
+function closeCommandPalette() {
+    commandPalette.close();
+}
+
+function updateCommandColumnVisibility() {
+    const isPlan = document.querySelector('input[name="commandType"]:checked')?.value === 'plan';
+    commandColumn.style.display = isPlan ? 'none' : '';
+}
+
+// Keyboard shortcut: Cmd+K / Ctrl+K
+document.addEventListener('keydown', (e) => {
+    // Don't trigger if user is in an input field (except when in command palette itself)
+    const isInputFocused = document.activeElement.matches('input, textarea, select') && 
+                          !commandPalette.contains(document.activeElement);
+    
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        if (commandPalette.open) {
+            closeCommandPalette();
+        } else if (!isInputFocused) {
+            openCommandPalette();
+        }
+    }
+    
+    // Escape to close (dialog handles this, but ensure it works)
+    if (e.key === 'Escape' && commandPalette.open) {
+        closeCommandPalette();
+    }
+});
+
+// Close button
+commandPalette.querySelector('.close-btn').addEventListener('click', closeCommandPalette);
+
+// AI button in header
+document.getElementById('aiBtn').addEventListener('click', openCommandPalette);
+
+// Close on backdrop click
+commandPalette.addEventListener('click', (e) => {
+    if (e.target === commandPalette) {
+        closeCommandPalette();
+    }
+});
+
+// Update column visibility when type changes
+document.querySelectorAll('input[name="commandType"]').forEach(radio => {
+    radio.addEventListener('change', updateCommandColumnVisibility);
+});
+
+// Handle submit with Enter (but allow Shift+Enter for newlines)
+commandInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        commandPaletteForm.requestSubmit();
+    }
+});
+
+// Form submission
+commandPaletteForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const prompt = commandInput.value.trim();
+    if (!prompt) {
+        showToast('Please enter a description', 'error');
+        return;
+    }
+    
+    const commandType = document.querySelector('input[name="commandType"]:checked').value;
+    const column = commandColumn.value;
+    
+    // Show loading state
+    const submitText = commandSubmit.querySelector('.submit-text');
+    const submitLoading = commandSubmit.querySelector('.submit-loading');
+    submitText.style.display = 'none';
+    submitLoading.style.display = 'flex';
+    commandSubmit.disabled = true;
+    commandInput.disabled = true;
+    
+    try {
+        let result;
+        
+        if (commandType === 'cards') {
+            result = await createCardsFromPrompt(prompt, column);
+            showToast(`Created ${result.count} card${result.count !== 1 ? 's' : ''}`, 'success');
+        } else {
+            result = await createPlanFromIdea(prompt);
+            showToast('Plan created', 'success');
+            // Optionally redirect to plans page
+            // window.location.href = '/plans';
+        }
+        
+        closeCommandPalette();
+        
+    } catch (error) {
+        console.error('Command palette error:', error);
+        showToast(error.message || 'Something went wrong', 'error');
+    } finally {
+        submitText.style.display = '';
+        submitLoading.style.display = 'none';
+        commandSubmit.disabled = false;
+        commandInput.disabled = false;
+    }
+});
+
+// API calls for NL interface
+async function createCardsFromPrompt(prompt, column = 'todo') {
+    const response = await fetch(`${API_BASE}/agent/nl/create-cards`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ prompt, column })
+    });
+    
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.detail || 'Failed to create cards');
+    }
+    
+    return response.json();
+}
+
+async function createPlanFromIdea(idea) {
+    const response = await fetch(`${API_BASE}/agent/nl/create-plan`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ idea })
+    });
+    
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.detail || 'Failed to create plan');
+    }
+    
+    return response.json();
+}
+
+// Export for potential external use
+window.openCommandPalette = openCommandPalette;

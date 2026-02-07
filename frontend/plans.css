@@ -707,3 +707,46 @@
         gap: 1.5rem;
     }
 }
+
+/* ====== Generate Cards Button ====== */
+
+.sidebar-actions {
+    padding: 1.25rem;
+    border-top: 1px solid var(--border);
+}
+
+.btn-generate-cards {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-generate-cards:hover:not(:disabled) {
+    background: var(--card);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.btn-generate-cards:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-generate-cards .spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
