@@ -1113,3 +1113,254 @@ select:focus:not(:focus-visible) {
         transition-duration: 0.01ms !important;
     }
 }
+
+/* Agent Workflow Section */
+.agent-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-subtle, var(--border));
+}
+
+.agent-header {
+    margin-bottom: 0.75rem;
+}
+
+.toggle-field {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.toggle-field input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin-right: 0.5rem;
+    accent-color: var(--accent);
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 13px;
+    color: var(--text-2);
+}
+
+.toggle-label .agent-icon {
+    color: var(--text-3);
+}
+
+.toggle-field input:checked + .toggle-label {
+    color: var(--text);
+}
+
+.toggle-field input:checked + .toggle-label .agent-icon {
+    color: var(--accent);
+}
+
+.agent-details {
+    padding-left: 0.25rem;
+}
+
+/* Agent Status */
+.agent-status-row,
+.agent-blocked-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.field-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    min-width: 60px;
+}
+
+.agent-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: var(--radius);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.agent-status-badge.ready {
+    background: rgba(117, 153, 124, 0.2);
+    color: var(--accent);
+}
+
+.agent-status-badge.in_progress {
+    background: rgba(100, 140, 180, 0.2);
+    color: #7ab3dc;
+}
+
+.agent-status-badge.blocked {
+    background: rgba(210, 107, 89, 0.2);
+    color: var(--mark-urgent);
+}
+
+.agent-status-badge.needs_review {
+    background: rgba(212, 182, 112, 0.2);
+    color: var(--mark-high);
+}
+
+.agent-blocked-reason {
+    font-size: 13px;
+    color: var(--mark-urgent);
+    font-style: italic;
+}
+
+/* Acceptance Criteria */
+.criteria-list {
+    margin-bottom: 0.5rem;
+}
+
+.criterion-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0;
+    border-bottom: 1px solid var(--border-subtle, var(--border));
+}
+
+.criterion-item:last-child {
+    border-bottom: none;
+}
+
+.criterion-item input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+}
+
+.criterion-item input[type="text"] {
+    flex: 1;
+    padding: 0.25rem 0.5rem;
+    font-size: 13px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    color: var(--text);
+}
+
+.criterion-item input[type="text"]:focus {
+    background: var(--bg);
+    border-color: var(--border);
+    outline: none;
+}
+
+.criterion-item input[type="text"].checked-text {
+    text-decoration: line-through;
+    color: var(--text-3);
+}
+
+.criterion-remove {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-3);
+    border-radius: var(--radius);
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.criterion-item:hover .criterion-remove {
+    opacity: 1;
+}
+
+.criterion-remove:hover {
+    background: var(--bg-hover);
+    color: var(--mark-urgent);
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 12px;
+}
+
+/* Progress Timeline */
+.agent-progress {
+    margin-top: 0.75rem;
+}
+
+.agent-progress label {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-3);
+    margin-bottom: 0.375rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.progress-timeline {
+    max-height: 150px;
+    overflow-y: auto;
+    padding: 0.5rem;
+    background: var(--bg);
+    border-radius: var(--radius);
+    border: 1px solid var(--border-subtle, var(--border));
+}
+
+.progress-entry {
+    padding: 0.375rem 0;
+    border-bottom: 1px solid var(--border-subtle, var(--border));
+}
+
+.progress-entry:last-child {
+    border-bottom: none;
+}
+
+.progress-timestamp {
+    font-size: 10px;
+    color: var(--text-3);
+    margin-bottom: 0.125rem;
+}
+
+.progress-message {
+    font-size: 13px;
+    color: var(--text-2);
+}
+
+.progress-empty {
+    font-size: 12px;
+    color: var(--text-3);
+    font-style: italic;
+}
+
+/* Card Agent Indicator */
+.card-agent-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 10px;
+    color: var(--text-3);
+    padding: 0.125rem 0.25rem;
+    border-radius: 3px;
+    background: var(--bg);
+}
+
+.card-agent-badge svg {
+    width: 12px;
+    height: 12px;
+}
+
+.card-agent-badge.blocked {
+    color: var(--mark-urgent);
+    background: rgba(210, 107, 89, 0.15);
+}
+
+.card-agent-badge.needs_review {
+    color: var(--mark-high);
+    background: rgba(212, 182, 112, 0.15);
+}
