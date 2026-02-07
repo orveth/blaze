@@ -3,7 +3,9 @@
 import asyncio
 import json
 import logging
+import os
 import re
+import shutil
 import subprocess
 from typing import Optional
 
@@ -11,6 +13,30 @@ logger = logging.getLogger(__name__)
 
 # Default session ID for Blaze agent requests
 AGENT_SESSION_ID = "blaze-agent"
+
+
+def get_openclaw_path() -> str:
+    """Find the openclaw binary path."""
+    # Check environment variable first
+    if env_path := os.environ.get("OPENCLAW_PATH"):
+        return env_path
+    
+    # Try common NixOS paths
+    nix_paths = [
+        "/etc/profiles/per-user/gudnuf/bin/openclaw",
+        "/run/current-system/sw/bin/openclaw",
+        os.path.expanduser("~/.nix-profile/bin/openclaw"),
+    ]
+    
+    for path in nix_paths:
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+    
+    # Fall back to PATH lookup
+    if which_path := shutil.which("openclaw"):
+        return which_path
+    
+    raise RuntimeError("openclaw binary not found. Set OPENCLAW_PATH or ensure it's in PATH.")
 
 
 def call_agent_sync(prompt: str, timeout: int = 120) -> str:
@@ -28,9 +54,12 @@ def call_agent_sync(prompt: str, timeout: int = 120) -> str:
         RuntimeError: If agent call fails
     """
     try:
+        openclaw_bin = get_openclaw_path()
+        logger.debug(f"Using openclaw at: {openclaw_bin}")
+        
         result = subprocess.run(
             [
-                "openclaw", "agent",
+                openclaw_bin, "agent",
                 "--session-id", AGENT_SESSION_ID,
                 "--message", prompt,
                 "--json",
