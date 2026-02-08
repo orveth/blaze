@@ -132,6 +132,14 @@ enum Commands {
         /// Clear due date
         #[arg(long)]
         clear_due: bool,
+
+        /// Mark as agent-assignable (agent can work on this autonomously)
+        #[arg(long)]
+        agent_assignable: bool,
+
+        /// Mark as NOT agent-assignable
+        #[arg(long)]
+        no_agent_assignable: bool,
     },
 
     /// Move a card to a different column
@@ -409,6 +417,8 @@ async fn run() -> error::Result<()> {
             tags_remove,
             due,
             clear_due,
+            agent_assignable,
+            no_agent_assignable,
         } => {
             let client = client::Client::new(&url, token)?;
             let options = edit::EditOptions {
@@ -421,6 +431,8 @@ async fn run() -> error::Result<()> {
                 tags_remove,
                 due,
                 clear_due,
+                agent_assignable,
+                no_agent_assignable,
             };
             edit::run(&client, options).await
         }

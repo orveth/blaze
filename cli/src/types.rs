@@ -171,6 +171,8 @@ pub struct CardUpdate {
     pub due_date: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_assignable: Option<bool>,
 }
 
 /// Request body for moving a card

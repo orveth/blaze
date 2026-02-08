@@ -16,6 +16,8 @@ pub struct EditOptions {
     pub tags_remove: Vec<String>,
     pub due: Option<String>,
     pub clear_due: bool,
+    pub agent_assignable: bool,
+    pub no_agent_assignable: bool,
 }
 
 pub async fn run(client: &Client, options: EditOptions) -> Result<()> {
@@ -57,6 +59,19 @@ pub async fn run(client: &Client, options: EditOptions) -> Result<()> {
         }
     };
 
+    // Determine agent_assignable value
+    let agent_assignable = if options.agent_assignable && options.no_agent_assignable {
+        return Err(crate::error::BlazeError::InvalidInput(
+            "Cannot specify both --agent-assignable and --no-agent-assignable".into()
+        ));
+    } else if options.agent_assignable {
+        Some(true)
+    } else if options.no_agent_assignable {
+        Some(false)
+    } else {
+        None
+    };
+
     let update = CardUpdate {
         title: options.title,
         description: options.description,
@@ -64,6 +79,7 @@ pub async fn run(client: &Client, options: EditOptions) -> Result<()> {
         priority: options.priority,
         tags,
         due_date,
+        agent_assignable,
     };
 
     // Check if any fields are being updated
@@ -73,6 +89,7 @@ pub async fn run(client: &Client, options: EditOptions) -> Result<()> {
         && update.priority.is_none()
         && update.tags.is_none()
         && update.due_date.is_none()
+        && update.agent_assignable.is_none()
         && !options.clear_due
     {
         return Err(crate::error::BlazeError::InvalidInput(
